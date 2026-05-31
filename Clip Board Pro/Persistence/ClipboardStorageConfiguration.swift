@@ -11,6 +11,8 @@ enum ClipboardStorageConfiguration: Sendable {
     static let databaseFileName = "clipboard.db"
     static let appSupportFolderName = "Clip Board Pro"
     static let imagesFolderName = "Images"
+    static let maxPinnedItems = 50
+    static let imageThumbnailMaxPixels = 96
 
     static var applicationSupportDirectory: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!

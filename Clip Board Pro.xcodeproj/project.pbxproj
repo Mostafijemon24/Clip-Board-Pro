@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		779AA2472FCCA21C00C336C9 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 7719EA112FCC9201000BD335 /* Sparkle */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		7719E9ED2FCC9106000BD335 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				779AA2472FCCA21C00C336C9 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -403,11 +408,11 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				"INFOPLIST_KEY_SUEnableAutomaticChecks[sdk=macosx*]" = YES;
-				"INFOPLIST_KEY_SUFeedURL[sdk=macosx*]" = "https://example.com/clipboard-pro/appcast.xml";
-				"INFOPLIST_KEY_SUPublicEDKey[sdk=macosx*]" = "REPLACE_WITH_generate_keys_OUTPUT";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSAccessibilityUsageDescription = "Clip Board Pro needs Accessibility access to paste clipboard items into other apps using the global shortcut and auto-paste.";
+				"INFOPLIST_KEY_SUEnableAutomaticChecks[sdk=macosx*]" = YES;
+				"INFOPLIST_KEY_SUFeedURL[sdk=macosx*]" = "https://example.com/clipboard-pro/appcast.xml";
+				"INFOPLIST_KEY_SUPublicEDKey[sdk=macosx*]" = REPLACE_WITH_generate_keys_OUTPUT;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -418,6 +423,7 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_MERGE_FILE = "Clip Board Pro/OAuth-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
@@ -453,11 +459,11 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				"INFOPLIST_KEY_SUEnableAutomaticChecks[sdk=macosx*]" = YES;
-				"INFOPLIST_KEY_SUFeedURL[sdk=macosx*]" = "https://example.com/clipboard-pro/appcast.xml";
-				"INFOPLIST_KEY_SUPublicEDKey[sdk=macosx*]" = "REPLACE_WITH_generate_keys_OUTPUT";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSAccessibilityUsageDescription = "Clip Board Pro needs Accessibility access to paste clipboard items into other apps using the global shortcut and auto-paste.";
+				"INFOPLIST_KEY_SUEnableAutomaticChecks[sdk=macosx*]" = YES;
+				"INFOPLIST_KEY_SUFeedURL[sdk=macosx*]" = "https://example.com/clipboard-pro/appcast.xml";
+				"INFOPLIST_KEY_SUPublicEDKey[sdk=macosx*]" = REPLACE_WITH_generate_keys_OUTPUT;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -468,6 +474,7 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_MERGE_FILE = "Clip Board Pro/OAuth-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";

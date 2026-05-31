@@ -9,6 +9,7 @@ import SwiftUI
 struct ClipboardHistoryView: View {
     @Bindable var viewModel: ClipboardHistoryViewModel
     @State private var searchText = ""
+    @State private var showClearConfirmation = false
     @FocusState private var isSearchFocused: Bool
 
     private var filteredItems: [StoredClipboardItem] {
@@ -24,6 +25,7 @@ struct ClipboardHistoryView: View {
                 searchBar
                 Divider()
                 content
+                footerBar
             }
         }
         .frame(width: 360, height: 480)
@@ -35,6 +37,18 @@ struct ClipboardHistoryView: View {
         .task { await viewModel.load() }
         .onReceive(NotificationCenter.default.publisher(for: MenuBarManager.popoverDidOpenNotification)) { _ in
             isSearchFocused = true
+        }
+        .confirmationDialog(
+            "Clear unpinned history?",
+            isPresented: $showClearConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Clear All Unpinned", role: .destructive) {
+                Task { await viewModel.clearUnpinned() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Pinned items (\(viewModel.pinnedCount)/\(ClipboardStorageConfiguration.maxPinnedItems)) will stay. Unpin them first to remove.")
         }
     }
 
@@ -96,9 +110,11 @@ struct ClipboardHistoryView: View {
             ScrollView {
                 LazyVStack(spacing: 2) {
                     ForEach(filteredItems) { item in
-                        ClipboardHistoryRow(item: item) {
-                            viewModel.paste(item)
-                        }
+                        ClipboardHistoryRow(
+                            item: item,
+                            onSelect: { viewModel.paste(item) },
+                            onTogglePin: { Task { await viewModel.togglePin(for: item) } }
+                        )
                     }
                 }
                 .padding(.horizontal, 6)
@@ -106,6 +122,38 @@ struct ClipboardHistoryView: View {
             }
             .scrollIndicators(.automatic)
         }
+    }
+
+    private var footerBar: some View {
+        VStack(spacing: 6) {
+            if let message = viewModel.actionMessage {
+                Text(message)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 12)
+            }
+
+            HStack {
+                Text("Pinned \(viewModel.pinnedCount)/\(ClipboardStorageConfiguration.maxPinnedItems)")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                Button("Clear All", role: .destructive) {
+                    showClearConfirmation = true
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 11, weight: .medium))
+                .disabled(viewModel.items.isEmpty)
+                .help("Removes unpinned items only")
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+        }
+        .background(.quaternary.opacity(0.25))
     }
 
     private var loadingState: some View {

@@ -9,8 +9,24 @@ struct GeneralSettingsView: View {
     @AppStorage(UserPreferences.launchAtLoginEnabledKey) private var launchAtLoginEnabled = false
     @State private var launchAtLoginError: String?
 
+    private var historyShortcutLabel: String {
+        ShortcutFormatting.displayString(
+            keyCode: UserPreferences.globalShortcutKeyCode,
+            modifiers: UserPreferences.globalShortcutModifiers
+        )
+    }
+
     var body: some View {
         Form {
+            Section {
+                LabeledContent("Open clipboard history") {
+                    Text(historyShortcutLabel)
+                        .font(.system(.body, design: .monospaced))
+                }
+            } footer: {
+                Text("Press this shortcut from any app to open your full copy list. macOS reserves plain ⌘V for Paste, so Clip Board Pro uses ⌘⇧V by default (customizable in Shortcuts).")
+            }
+
             Section {
                 Toggle("Launch at Login", isOn: $launchAtLoginEnabled)
                     .onChange(of: launchAtLoginEnabled) { _, enabled in

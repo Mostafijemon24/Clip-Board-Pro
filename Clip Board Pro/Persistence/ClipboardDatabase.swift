@@ -34,6 +34,12 @@ final class ClipboardDatabase: @unchecked Sendable {
         }
     }
 
+    func insertIfNotExists(_ item: StoredClipboardItem) async throws -> Bool {
+        try await sqlite.perform { db in
+            try self.insertIfNotExists(item, connection: db)
+        }
+    }
+
     func fetchRecent(limit: Int) async throws -> [StoredClipboardItem] {
         try await sqlite.perform { db in
             try self.fetchRecent(limit: limit, connection: db)
@@ -43,6 +49,30 @@ final class ClipboardDatabase: @unchecked Sendable {
     func count() async throws -> Int {
         try await sqlite.perform { db in
             try self.count(connection: db)
+        }
+    }
+
+    func countPinned() async throws -> Int {
+        try await sqlite.perform { db in
+            try self.countPinned(connection: db)
+        }
+    }
+
+    func fetchAllPinned() async throws -> [StoredClipboardItem] {
+        try await sqlite.perform { db in
+            try self.fetchAllPinned(connection: db)
+        }
+    }
+
+    func setPinned(id: UUID, pinned: Bool) async throws {
+        try await sqlite.perform { db in
+            try self.setPinned(id: id, pinned: pinned, connection: db)
+        }
+    }
+
+    func clearUnpinnedHistory() async throws -> Int {
+        try await sqlite.perform { db in
+            try self.clearUnpinnedHistory(connection: db)
         }
     }
 
@@ -73,36 +103,7 @@ final class ClipboardDatabase: @unchecked Sendable {
     }
 
     func clearAllHistory() async throws -> Int {
-        try await sqlite.perform { db in
-            let sql = "SELECT kind, content FROM clipboard_items;"
-            var statement: OpaquePointer?
-            defer { sqlite3_finalize(statement) }
-
-            guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
-                throw ClipboardPersistenceError.sqliteError(self.errorMessage(from: db))
-            }
-
-            var deletedCount = 0
-            while sqlite3_step(statement) == SQLITE_ROW {
-                deletedCount += 1
-                let kind = ClipboardItemKind(rawValue: Int(sqlite3_column_int(statement, 0))) ?? .text
-                if kind == .image {
-                    let path = String(cString: sqlite3_column_text(statement, 1))
-                    ImageFileStore.deleteImage(atPath: path)
-                }
-            }
-
-            var errorMessage: UnsafeMutablePointer<CChar>?
-            let deleteStatus = sqlite3_exec(db, "DELETE FROM clipboard_items;", nil, nil, &errorMessage)
-            if deleteStatus != SQLITE_OK {
-                let message = errorMessage.map { String(cString: $0) } ?? "Delete failed"
-                sqlite3_free(errorMessage)
-                throw ClipboardPersistenceError.sqliteError(message)
-            }
-
-            try self.vacuum(connection: db)
-            return deletedCount
-        }
+        try await clearUnpinnedHistory()
     }
 
     // MARK: - Schema
@@ -128,6 +129,36 @@ final class ClipboardDatabase: @unchecked Sendable {
             sqlite3_free(errorMessage)
             throw ClipboardPersistenceError.sqliteError(message)
         }
+
+        try addColumnIfMissing(db, name: "is_pinned", definition: "INTEGER NOT NULL DEFAULT 0")
+        try addColumnIfMissing(db, name: "pinned_at", definition: "REAL")
+    }
+
+    private static func addColumnIfMissing(_ db: OpaquePointer, name: String, definition: String) throws {
+        let pragma = "PRAGMA table_info(clipboard_items);"
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, pragma, -1, &statement, nil) == SQLITE_OK else {
+            throw ClipboardPersistenceError.sqliteError(String(cString: sqlite3_errmsg(db)))
+        }
+
+        var exists = false
+        while sqlite3_step(statement) == SQLITE_ROW {
+            let columnName = String(cString: sqlite3_column_text(statement, 1))
+            if columnName == name { exists = true; break }
+        }
+
+        guard !exists else { return }
+
+        let alter = "ALTER TABLE clipboard_items ADD COLUMN \(name) \(definition);"
+        var errorMessage: UnsafeMutablePointer<CChar>?
+        let status = sqlite3_exec(db, alter, nil, nil, &errorMessage)
+        if status != SQLITE_OK {
+            let message = errorMessage.map { String(cString: $0) } ?? "ALTER failed"
+            sqlite3_free(errorMessage)
+            throw ClipboardPersistenceError.sqliteError(message)
+        }
     }
 
     // MARK: - Sync helpers (run inside sqlite.perform)
@@ -135,8 +166,8 @@ final class ClipboardDatabase: @unchecked Sendable {
     private func insert(_ item: StoredClipboardItem, connection db: OpaquePointer) throws {
         let sql = """
         INSERT INTO clipboard_items
-            (id, kind, content, source_bundle_id, created_at, byte_size)
-        VALUES (?, ?, ?, ?, ?, ?);
+            (id, kind, content, source_bundle_id, created_at, byte_size, is_pinned, pinned_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?);
         """
 
         var statement: OpaquePointer?
@@ -152,17 +183,57 @@ final class ClipboardDatabase: @unchecked Sendable {
         bindOptionalText(statement, index: 4, value: item.sourceBundleIdentifier)
         sqlite3_bind_double(statement, 5, item.createdAt.timeIntervalSinceReferenceDate)
         sqlite3_bind_int64(statement, 6, Int64(item.byteSize))
+        sqlite3_bind_int(statement, 7, item.isPinned ? 1 : 0)
+        if let pinnedAt = item.pinnedAt {
+            sqlite3_bind_double(statement, 8, pinnedAt.timeIntervalSinceReferenceDate)
+        } else {
+            sqlite3_bind_null(statement, 8)
+        }
 
         guard sqlite3_step(statement) == SQLITE_DONE else {
             throw ClipboardPersistenceError.sqliteError(errorMessage(from: db))
         }
     }
 
+    private func insertIfNotExists(_ item: StoredClipboardItem, connection db: OpaquePointer) throws -> Bool {
+        let sql = """
+        INSERT OR IGNORE INTO clipboard_items
+            (id, kind, content, source_bundle_id, created_at, byte_size, is_pinned, pinned_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+        """
+
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw ClipboardPersistenceError.sqliteError(errorMessage(from: db))
+        }
+
+        sqlite3_bind_text(statement, 1, item.id.uuidString, -1, Self.transient)
+        sqlite3_bind_int(statement, 2, Int32(item.kind.rawValue))
+        sqlite3_bind_text(statement, 3, item.content, -1, Self.transient)
+        bindOptionalText(statement, index: 4, value: item.sourceBundleIdentifier)
+        sqlite3_bind_double(statement, 5, item.createdAt.timeIntervalSinceReferenceDate)
+        sqlite3_bind_int64(statement, 6, Int64(item.byteSize))
+        sqlite3_bind_int(statement, 7, item.isPinned ? 1 : 0)
+        if let pinnedAt = item.pinnedAt {
+            sqlite3_bind_double(statement, 8, pinnedAt.timeIntervalSinceReferenceDate)
+        } else {
+            sqlite3_bind_null(statement, 8)
+        }
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw ClipboardPersistenceError.sqliteError(errorMessage(from: db))
+        }
+
+        return sqlite3_changes(db) > 0
+    }
+
     private func fetchRecent(limit: Int, connection db: OpaquePointer) throws -> [StoredClipboardItem] {
         let sql = """
-        SELECT id, kind, content, source_bundle_id, created_at, byte_size
+        SELECT id, kind, content, source_bundle_id, created_at, byte_size, is_pinned, pinned_at
         FROM clipboard_items
-        ORDER BY created_at DESC
+        ORDER BY is_pinned DESC, pinned_at DESC, created_at DESC
         LIMIT ?;
         """
 
@@ -195,8 +266,115 @@ final class ClipboardDatabase: @unchecked Sendable {
         return Int(sqlite3_column_int64(statement, 0))
     }
 
+    private func fetchAllPinned(connection db: OpaquePointer) throws -> [StoredClipboardItem] {
+        let sql = """
+        SELECT id, kind, content, source_bundle_id, created_at, byte_size, is_pinned, pinned_at
+        FROM clipboard_items
+        WHERE is_pinned = 1
+        ORDER BY pinned_at DESC;
+        """
+
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw ClipboardPersistenceError.sqliteError(errorMessage(from: db))
+        }
+
+        var items: [StoredClipboardItem] = []
+        while sqlite3_step(statement) == SQLITE_ROW {
+            items.append(try mapRow(statement))
+        }
+        return items
+    }
+
+    private func countPinned(connection db: OpaquePointer) throws -> Int {
+        let sql = "SELECT COUNT(*) FROM clipboard_items WHERE is_pinned = 1;"
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw ClipboardPersistenceError.sqliteError(errorMessage(from: db))
+        }
+
+        guard sqlite3_step(statement) == SQLITE_ROW else { return 0 }
+        return Int(sqlite3_column_int64(statement, 0))
+    }
+
+    private func setPinned(id: UUID, pinned: Bool, connection db: OpaquePointer) throws {
+        if pinned {
+            let sqlCount = "SELECT COUNT(*) FROM clipboard_items WHERE is_pinned = 1 AND id != ?;"
+            var countStmt: OpaquePointer?
+            defer { sqlite3_finalize(countStmt) }
+            guard sqlite3_prepare_v2(db, sqlCount, -1, &countStmt, nil) == SQLITE_OK else {
+                throw ClipboardPersistenceError.sqliteError(errorMessage(from: db))
+            }
+            sqlite3_bind_text(countStmt, 1, id.uuidString, -1, Self.transient)
+            guard sqlite3_step(countStmt) == SQLITE_ROW else {
+                throw ClipboardPersistenceError.sqliteError(errorMessage(from: db))
+            }
+            let pinnedCount = Int(sqlite3_column_int64(countStmt, 0))
+            if pinnedCount >= ClipboardStorageConfiguration.maxPinnedItems {
+                throw ClipboardPersistenceError.pinLimitReached
+            }
+        }
+
+        let sql = "UPDATE clipboard_items SET is_pinned = ?, pinned_at = ? WHERE id = ?;"
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw ClipboardPersistenceError.sqliteError(errorMessage(from: db))
+        }
+
+        sqlite3_bind_int(statement, 1, pinned ? 1 : 0)
+        if pinned {
+            sqlite3_bind_double(statement, 2, Date().timeIntervalSinceReferenceDate)
+        } else {
+            sqlite3_bind_null(statement, 2)
+        }
+        sqlite3_bind_text(statement, 3, id.uuidString, -1, Self.transient)
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw ClipboardPersistenceError.sqliteError(errorMessage(from: db))
+        }
+    }
+
+    private func clearUnpinnedHistory(connection db: OpaquePointer) throws -> Int {
+        let sql = "SELECT kind, content FROM clipboard_items WHERE is_pinned = 0;"
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw ClipboardPersistenceError.sqliteError(errorMessage(from: db))
+        }
+
+        var deletedCount = 0
+        while sqlite3_step(statement) == SQLITE_ROW {
+            deletedCount += 1
+            let kind = ClipboardItemKind(rawValue: Int(sqlite3_column_int(statement, 0))) ?? .text
+            if kind == .image {
+                let path = String(cString: sqlite3_column_text(statement, 1))
+                ImageFileStore.deleteImage(atPath: path)
+            }
+        }
+
+        var errorMessage: UnsafeMutablePointer<CChar>?
+        let deleteStatus = sqlite3_exec(db, "DELETE FROM clipboard_items WHERE is_pinned = 0;", nil, nil, &errorMessage)
+        if deleteStatus != SQLITE_OK {
+            let message = errorMessage.map { String(cString: $0) } ?? "Delete failed"
+            sqlite3_free(errorMessage)
+            throw ClipboardPersistenceError.sqliteError(message)
+        }
+
+        if deletedCount > 0 {
+            try vacuum(connection: db)
+        }
+        return deletedCount
+    }
+
     private func deleteItemsOlderThan(_ cutoff: Date, connection db: OpaquePointer) throws -> Int {
-        let sql = "SELECT id, kind, content FROM clipboard_items WHERE created_at < ?;"
+        let sql = "SELECT id, kind, content FROM clipboard_items WHERE created_at < ? AND is_pinned = 0;"
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
 
@@ -227,8 +405,9 @@ final class ClipboardDatabase: @unchecked Sendable {
 
     private func fetchOldestItem(connection db: OpaquePointer) throws -> StoredClipboardItem? {
         let sql = """
-        SELECT id, kind, content, source_bundle_id, created_at, byte_size
+        SELECT id, kind, content, source_bundle_id, created_at, byte_size, is_pinned, pinned_at
         FROM clipboard_items
+        WHERE is_pinned = 0
         ORDER BY created_at ASC
         LIMIT 1;
         """
@@ -298,6 +477,14 @@ final class ClipboardDatabase: @unchecked Sendable {
 
         let createdAt = Date(timeIntervalSinceReferenceDate: sqlite3_column_double(statement, 4))
         let byteSize = Int(sqlite3_column_int64(statement, 5))
+        let isPinned = sqlite3_column_int(statement, 6) != 0
+
+        let pinnedAt: Date?
+        if sqlite3_column_type(statement, 7) != SQLITE_NULL {
+            pinnedAt = Date(timeIntervalSinceReferenceDate: sqlite3_column_double(statement, 7))
+        } else {
+            pinnedAt = nil
+        }
 
         return StoredClipboardItem(
             id: id,
@@ -305,7 +492,9 @@ final class ClipboardDatabase: @unchecked Sendable {
             content: content,
             sourceBundleIdentifier: sourceBundleID,
             createdAt: createdAt,
-            byteSize: byteSize
+            byteSize: byteSize,
+            isPinned: isPinned,
+            pinnedAt: pinnedAt
         )
     }
 

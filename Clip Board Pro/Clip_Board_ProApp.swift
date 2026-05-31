@@ -11,7 +11,7 @@ struct Clip_Board_ProApp: App {
 
     var body: some Scene {
         Settings {
-            SettingsView()
+            SettingsRootView()
         }
     }
 }

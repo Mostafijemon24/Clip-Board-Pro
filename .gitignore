@@ -1,0 +1,11 @@
+# OAuth secrets — keep local, do not push to public GitHub
+Clip Board Pro/OAuth-Info.plist
+
+# Release artifacts
+build/
+
+# Xcode / tooling
+*.profraw
+.DS_Store
+xcuserdata/
+*.xcuserstate

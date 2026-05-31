@@ -39,13 +39,24 @@ final class MenuBarManager: NSObject, NSPopoverDelegate {
         item.button?.sendAction(on: NSEvent.EventTypeMask([.leftMouseUp, .rightMouseUp]))
 
         contextMenu = NSMenu()
-        contextMenu?.addItem(
-            NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+
+        let settingsItem = NSMenuItem(
+            title: "Settings…",
+            action: #selector(openSettings),
+            keyEquivalent: ","
         )
+        settingsItem.target = self
+        contextMenu?.addItem(settingsItem)
+
         contextMenu?.addItem(.separator())
-        contextMenu?.addItem(
-            NSMenuItem(title: "Quit Clip Board Pro", action: #selector(quitApp), keyEquivalent: "q")
+
+        let quitItem = NSMenuItem(
+            title: "Quit Clip Board Pro",
+            action: #selector(quitApp),
+            keyEquivalent: "q"
         )
+        quitItem.target = self
+        contextMenu?.addItem(quitItem)
 
         let popover = NSPopover()
         popover.contentSize = NSSize(width: 360, height: 480)
@@ -66,6 +77,11 @@ final class MenuBarManager: NSObject, NSPopoverDelegate {
 
     var isPopoverShown: Bool {
         popover?.isShown ?? false
+    }
+
+    /// Opens the clipboard history popover (Dock/Finder launch or reopen).
+    func showMainUIOnLaunch() {
+        openPopover()
     }
 
     /// Called by the global ⌘⇧V shortcut.
@@ -105,12 +121,11 @@ final class MenuBarManager: NSObject, NSPopoverDelegate {
         }
     }
 
-    @objc private func openSettings() {
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        NSApp.activate(ignoringOtherApps: true)
+    @objc func openSettings() {
+        SettingsWindowController.shared.show()
     }
 
-    @objc private func quitApp() {
+    @objc func quitApp() {
         NSApp.terminate(nil)
     }
 

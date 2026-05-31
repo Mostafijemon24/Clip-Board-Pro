@@ -53,6 +53,8 @@ final class AppServices {
 
             clipboardService.startMonitoring()
             logger.info("App services started")
+
+            await CloudAccountCoordinator.shared.startupSyncIfNeeded()
         }
     }
 

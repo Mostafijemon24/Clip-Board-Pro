@@ -14,6 +14,8 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
 
     private var window: NSWindow?
 
+    var isPresenting: Bool { window != nil }
+
     private override init() {
         super.init()
     }

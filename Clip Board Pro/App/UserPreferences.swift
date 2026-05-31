@@ -13,6 +13,11 @@ enum UserPreferences {
     static let globalShortcutModifiersKey = "globalShortcutModifiers"
     static let securityBlacklistKey = "securityBlacklistBundleIDs"
     static let hasCompletedAccessibilityOnboardingKey = "hasCompletedAccessibilityOnboarding"
+    static let appleUserIdentifierKey = "appleUserIdentifier"
+    static let appleUserEmailKey = "appleUserEmail"
+    static let appleUserFullNameKey = "appleUserFullName"
+    static let iCloudSyncEnabledKey = "iCloudSyncEnabled"
+    static let cloudSyncEnabledKey = "cloudSyncEnabled"
 
     static let defaultShortcutKeyCode = Int(kVK_ANSI_V)
     static let defaultShortcutModifiers = Int(cmdKey | shiftKey)

@@ -44,6 +44,16 @@ final class ClipboardRepository: @unchecked Sendable {
         return item
     }
 
+    /// Merges a pinned item from Google Drive into local storage.
+    func importFromCloud(_ item: StoredClipboardItem) async throws {
+        guard item.isPinned else { return }
+        let inserted = try await database.insertIfNotExists(item)
+        if inserted {
+            logger.debug("Imported cloud item \(item.id.uuidString, privacy: .public)")
+            await postHistoryChanged()
+        }
+    }
+
     func fetchRecent(limit: Int = 200) async throws -> [StoredClipboardItem] {
         try await database.fetchRecent(limit: limit)
     }
@@ -52,11 +62,29 @@ final class ClipboardRepository: @unchecked Sendable {
         try await database.count()
     }
 
-    func clearAllHistory() async throws -> Int {
-        let deleted = try await database.clearAllHistory()
-        logger.info("Cleared \(deleted, privacy: .public) clipboard items")
+    func pinnedCount() async throws -> Int {
+        try await database.countPinned()
+    }
+
+    func setPinned(id: UUID, pinned: Bool) async throws {
+        try await database.setPinned(id: id, pinned: pinned)
+        await postHistoryChanged()
+    }
+
+    func fetchAllPinned() async throws -> [StoredClipboardItem] {
+        try await database.fetchAllPinned()
+    }
+
+    /// Removes all items except pinned clips.
+    func clearUnpinnedHistory() async throws -> Int {
+        let deleted = try await database.clearUnpinnedHistory()
+        logger.info("Cleared \(deleted, privacy: .public) unpinned clipboard items")
         await postHistoryChanged()
         return deleted
+    }
+
+    func clearAllHistory() async throws -> Int {
+        try await clearUnpinnedHistory()
     }
 
     @MainActor

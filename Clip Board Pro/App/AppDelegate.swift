@@ -23,6 +23,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 #endif
 
         OnboardingWindowController.shared.presentIfNeeded()
+
+        if !OnboardingWindowController.shared.isPresenting {
+            MenuBarManager.shared.showMainUIOnLaunch()
+        }
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        NSApp.activate(ignoringOtherApps: true)
+        MenuBarManager.shared.showMainUIOnLaunch()
+        return true
     }
 
     func applicationWillTerminate(_ notification: Notification) {

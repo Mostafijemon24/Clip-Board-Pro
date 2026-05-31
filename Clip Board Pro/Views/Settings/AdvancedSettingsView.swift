@@ -16,7 +16,7 @@ struct AdvancedSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Button("Clear All History", role: .destructive) {
+                Button("Clear All Unpinned", role: .destructive) {
                     showClearConfirmation = true
                 }
                 .disabled(isClearing)
@@ -38,7 +38,7 @@ struct AdvancedSettingsView: View {
                         .foregroundStyle(.red)
                 }
             } footer: {
-                Text("Permanently deletes all saved clipboard items and associated image files.")
+                Text("Deletes unpinned items only. Up to \(ClipboardStorageConfiguration.maxPinnedItems) pinned clips are kept until you unpin them.")
             }
 
             Section {
@@ -54,16 +54,16 @@ struct AdvancedSettingsView: View {
         .formStyle(.grouped)
         .padding(20)
         .confirmationDialog(
-            "Clear all clipboard history?",
+            "Clear unpinned clipboard history?",
             isPresented: $showClearConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Clear All History", role: .destructive) {
+            Button("Clear All Unpinned", role: .destructive) {
                 Task { await clearHistory() }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This action cannot be undone.")
+            Text("Pinned items are not removed.")
         }
     }
 
@@ -74,8 +74,10 @@ struct AdvancedSettingsView: View {
         defer { isClearing = false }
 
         do {
-            let deleted = try await AppServices.shared.repository.clearAllHistory()
-            clearResultMessage = "Removed \(deleted) item(s)."
+            let deleted = try await AppServices.shared.repository.clearUnpinnedHistory()
+            clearResultMessage = deleted > 0
+                ? "Removed \(deleted) unpinned item(s)."
+                : "Nothing to clear (pinned items were kept)."
         } catch {
             clearErrorMessage = error.localizedDescription
         }

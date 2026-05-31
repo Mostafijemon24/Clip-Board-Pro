@@ -13,6 +13,8 @@ final class ClipboardHistoryViewModel {
     private(set) var items: [StoredClipboardItem] = []
     private(set) var isLoading = false
     private(set) var totalCount = 0
+    private(set) var pinnedCount = 0
+    var actionMessage: String?
 
     private let repository: ClipboardRepository
     nonisolated(unsafe) private var observer: NSObjectProtocol?
@@ -43,11 +45,14 @@ final class ClipboardHistoryViewModel {
         do {
             async let recent = repository.fetchRecent(limit: 200)
             async let count = repository.itemCount()
+            async let pinned = repository.pinnedCount()
             items = try await recent
             totalCount = try await count
+            pinnedCount = try await pinned
         } catch {
             items = []
             totalCount = 0
+            pinnedCount = 0
         }
     }
 
@@ -70,5 +75,34 @@ final class ClipboardHistoryViewModel {
 
     func paste(_ item: StoredClipboardItem) {
         ClipboardPasteCoordinator.shared.paste(item)
+    }
+
+    func togglePin(for item: StoredClipboardItem) async {
+        actionMessage = nil
+        do {
+            if item.isPinned {
+                try await repository.setPinned(id: item.id, pinned: false)
+            } else {
+                try await repository.setPinned(id: item.id, pinned: true)
+                let pinnedItem = item.withPinState(isPinned: true, pinnedAt: Date())
+                await ClipboardSyncCoordinator.uploadPinnedIfNeeded(pinnedItem)
+            }
+        } catch {
+            actionMessage = error.localizedDescription
+        }
+    }
+
+    func clearUnpinned() async {
+        actionMessage = nil
+        do {
+            let deleted = try await repository.clearUnpinnedHistory()
+            if deleted == 0 {
+                actionMessage = "Nothing to clear (only unpinned items are removed)."
+            } else {
+                actionMessage = "Cleared \(deleted) item(s). \(pinnedCount) pinned kept."
+            }
+        } catch {
+            actionMessage = error.localizedDescription
+        }
     }
 }

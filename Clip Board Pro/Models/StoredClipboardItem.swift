@@ -20,7 +20,7 @@ enum ClipboardItemKind: Int, Sendable, Codable, CaseIterable {
 }
 
 /// A clipboard entry persisted in SQLite.
-struct StoredClipboardItem: Identifiable, Equatable, Sendable {
+struct StoredClipboardItem: Identifiable, Equatable, Sendable, Codable {
     let id: UUID
     let kind: ClipboardItemKind
     /// Text body, URL string, or on-disk image path.
@@ -28,6 +28,8 @@ struct StoredClipboardItem: Identifiable, Equatable, Sendable {
     let sourceBundleIdentifier: String?
     let createdAt: Date
     let byteSize: Int
+    let isPinned: Bool
+    let pinnedAt: Date?
 
     init(
         id: UUID,
@@ -35,7 +37,9 @@ struct StoredClipboardItem: Identifiable, Equatable, Sendable {
         content: String,
         sourceBundleIdentifier: String?,
         createdAt: Date,
-        byteSize: Int
+        byteSize: Int,
+        isPinned: Bool = false,
+        pinnedAt: Date? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -43,6 +47,8 @@ struct StoredClipboardItem: Identifiable, Equatable, Sendable {
         self.sourceBundleIdentifier = sourceBundleIdentifier
         self.createdAt = createdAt
         self.byteSize = byteSize
+        self.isPinned = isPinned
+        self.pinnedAt = pinnedAt
     }
 
     init(from capture: ClipboardCapture) throws {
@@ -56,6 +62,21 @@ struct StoredClipboardItem: Identifiable, Equatable, Sendable {
         sourceBundleIdentifier = capture.sourceBundleIdentifier
         createdAt = capture.capturedAt
         byteSize = payload.byteSize
+        isPinned = false
+        pinnedAt = nil
+    }
+
+    func withPinState(isPinned: Bool, pinnedAt: Date?) -> StoredClipboardItem {
+        StoredClipboardItem(
+            id: id,
+            kind: kind,
+            content: content,
+            sourceBundleIdentifier: sourceBundleIdentifier,
+            createdAt: createdAt,
+            byteSize: byteSize,
+            isPinned: isPinned,
+            pinnedAt: pinnedAt
+        )
     }
 
     var previewText: String {
@@ -74,6 +95,7 @@ enum ClipboardPersistenceError: Error, LocalizedError {
     case unsupportedContent
     case databaseUnavailable
     case sqliteError(String)
+    case pinLimitReached
 
     var errorDescription: String? {
         switch self {
@@ -83,6 +105,8 @@ enum ClipboardPersistenceError: Error, LocalizedError {
             "Database connection is unavailable."
         case .sqliteError(let message):
             message
+        case .pinLimitReached:
+            "You can pin up to \(ClipboardStorageConfiguration.maxPinnedItems) items. Unpin one first."
         }
     }
 }
