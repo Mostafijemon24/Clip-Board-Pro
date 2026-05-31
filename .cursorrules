@@ -1,0 +1,18 @@
+# macOS Premium Clipboard Manager Core Rules
+
+1. ARCHITECTURE: Use MVVM design pattern. SwiftUI for UI, Swift for logic.
+2. FRAMEWORKS: AppKit, SwiftUI, CoreData (or SQLite with SQLCipher for encryption), Sparkle.
+3. SECURITY FIRST: 
+   - Strict App Sandbox compliance.
+   - Implement Process-based filtering (Ignore password managers like 1Password, Bitwarden, Keychain, Banking apps).
+   - Do NOT store raw image data in RAM; save to disk and keep references.
+4. MEMORY EFFICIENCY: 
+   - Zero-memory leak policy. Use `[weak self]` in closures.
+   - History must automatically prune items older than 30 days or if DB > 100MB.
+5. HIG STANDARDS:
+   - Menu Bar app using NSStatusItem.
+   - UI must support adaptive Dark/Light mode, translucency, and SF Symbols.
+6. PRODUCTIVITY:
+   - Provide seamless global keyboard shortcut (e.g., Cmd+Shift+V).
+   - Auto-paste functionality using CGEvent.
+7. DISTRIBUTION: Prepare the build pipeline for Sparkle framework updates and DMG creation via `create-dmg`.

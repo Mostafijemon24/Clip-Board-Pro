@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymark.com/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <channel>
+        <title>Clip Board Pro Changelog</title>
+        <link>https://example.com/clipboard-pro/appcast.xml</link>
+        <description>Most recent updates to Clip Board Pro</description>
+        <language>en</language>
+
+        <!--
+          Sparkle 2 appcast template
+          ─────────────────────────────
+          1. Host this file at the URL set in SUFeedURL (Info.plist).
+          2. Generate EdDSA keys:  ./Sparkle/bin/generate_keys  (from Sparkle repo checkout)
+          3. Put the public key in Info.plist → SUPublicEDKey
+          4. Sign the DMG/ZIP:     ./Sparkle/bin/sign_update Install_ClipboardManager.dmg
+          5. Copy sparkle:edSignature and length from sign_update output into <enclosure>.
+        -->
+
+        <item>
+            <title>Version 1.0.1</title>
+            <link>https://example.com/clipboard-pro/releases/1.0.1</link>
+            <sparkle:version>2</sparkle:version>
+            <sparkle:shortVersionString>1.0.1</sparkle:shortVersionString>
+            <description><![CDATA[
+                <h2>Clip Board Pro 1.0.1</h2>
+                <ul>
+                    <li>Sparkle auto-update integration</li>
+                    <li>Accessibility onboarding flow</li>
+                    <li>Settings window with Launch at Login</li>
+                    <li>Global shortcut and auto-paste improvements</li>
+                </ul>
+            ]]></description>
+            <pubDate>Sat, 31 May 2026 12:00:00 +0000</pubDate>
+            <enclosure
+                url="https://example.com/clipboard-pro/releases/Install_ClipboardManager-1.0.1.dmg"
+                sparkle:edSignature="REPLACE_WITH_output_of_sign_update"
+                length="0"
+                type="application/octet-stream" />
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+        </item>
+
+        <item>
+            <title>Version 1.0.0</title>
+            <link>https://example.com/clipboard-pro/releases/1.0.0</link>
+            <sparkle:version>1</sparkle:version>
+            <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+            <description><![CDATA[
+                <h2>Clip Board Pro 1.0.0</h2>
+                <p>Initial public release.</p>
+            ]]></description>
+            <pubDate>Fri, 30 May 2026 12:00:00 +0000</pubDate>
+            <enclosure
+                url="https://example.com/clipboard-pro/releases/Install_ClipboardManager-1.0.0.dmg"
+                sparkle:edSignature="REPLACE_WITH_output_of_sign_update"
+                length="0"
+                type="application/octet-stream" />
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+        </item>
+    </channel>
+</rss>
