@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+release/
+
+# Electron (binary is re-downloaded via postinstall)
+node_modules/electron/dist/
+node_modules/electron/path.txt
+
+# Icons generated at build time
+build/icon.icns
+build/trayTemplate.png
+
+# Environment & secrets
+.env
+.env.*
+*.pem
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Vite
+.vite/

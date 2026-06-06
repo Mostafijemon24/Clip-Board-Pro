@@ -1,0 +1,79 @@
+{
+  "name": "clip-board-pro",
+  "private": true,
+  "version": "1.1.0",
+  "description": "Clip Board Pro — macOS clipboard manager",
+  "author": "Mostafij Emon",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Mostafijemon24/Clip-Board-Pro.git"
+  },
+  "homepage": "https://github.com/Mostafijemon24/Clip-Board-Pro#readme",
+  "bugs": {
+    "url": "https://github.com/Mostafijemon24/Clip-Board-Pro/issues"
+  },
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "electron:dev": "bash scripts/electron-dev.sh",
+    "electron:build": "npm run build && node scripts/create-icons.js && node scripts/fix-electron.js && electron-builder --mac",
+    "electron:pack": "npm run build && node scripts/create-icons.js && node scripts/fix-electron.js && electron-builder --mac --dir",
+    "postinstall": "node scripts/fix-electron.js"
+  },
+  "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
+    "@radix-ui/react-slot": "^1.2.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "emoji-mart": "^5.6.0",
+    "lucide-react": "^0.562.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "electron": "^35.7.5",
+    "electron-builder": "^25.1.8",
+    "tailwindcss": "^4.0.0",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5"
+  },
+  "build": {
+    "appId": "com.clipboardpro.app",
+    "productName": "Clip Board Pro",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "build/entitlements.mac.plist"
+    ],
+    "asar": true,
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "identity": null,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "icon": "build/icon.icns",
+      "extendInfo": {
+        "LSUIElement": true,
+        "NSAppleEventsUsageDescription": "Clip Board Pro needs this permission to paste items into other applications."
+      }
+    }
+  }
+}
