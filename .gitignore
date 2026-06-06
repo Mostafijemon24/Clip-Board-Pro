@@ -11,6 +11,9 @@ node_modules/electron/path.txt
 
 # Icons generated at build time (source lives in assets/icons/)
 build/icon.icns
+build/icon.iconset/
+build/icon.png
+build/trayTemplate.png
 
 # Environment & secrets
 .env
