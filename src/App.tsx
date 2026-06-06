@@ -1127,7 +1127,7 @@ function SettingsPanel({
         <ShortcutEditor current={shortcut} onSave={onShortcutSave} />
       </div>
       <div className="bg-neutral-100/40 border-t border-neutral-200 flex px-4 py-3 justify-between items-center">
-        <span className="text-neutral-500 text-xs">ClipBoard Pro v1.1.1</span>
+        <span className="text-neutral-500 text-xs">ClipBoard Pro v1.2.0</span>
         <button className="underline underline-offset-2 text-neutral-950 text-xs">Check for updates</button>
       </div>
     </>

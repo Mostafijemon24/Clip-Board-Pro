@@ -10,7 +10,7 @@
 
 ## বাংলায় দ্রুত শুরু
 
-1. **[Releases](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/latest)** থেকে `ClipBoard.Pro-1.1.1-arm64.dmg` ডাউনলোড করুন।
+1. **[Releases](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/latest)** থেকে `ClipBoard.Pro-1.2.0-arm64.dmg` ডাউনলোড করুন।
 2. DMG খুলে **Applications** ফোল্ডারে অ্যাপ টেনে রাখুন।
 3. প্রথমবার **Right-click → Open** দিয়ে চালু করুন (unsigned build)।
 4. **System Settings → Privacy & Security → Accessibility**-তে `ClipBoard Pro` allow করুন।
@@ -25,8 +25,8 @@
 
 | File | Description |
 |------|-------------|
-| [**DMG Installer**](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/download/v1.1.1/ClipBoard.Pro-1.1.1-arm64.dmg) | Recommended — drag to Applications |
-| [**ZIP Archive**](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/download/v1.1.1/ClipBoard.Pro-1.1.1-arm64-mac.zip) | Portable `.app` bundle |
+| [**DMG Installer**](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/download/v1.2.0/ClipBoard.Pro-1.2.0-arm64.dmg) | Recommended — drag to Applications |
+| [**ZIP Archive**](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/download/v1.2.0/ClipBoard.Pro-1.2.0-arm64-mac.zip) | Portable `.app` bundle |
 
 > Requires **macOS 12+** on **Apple Silicon (M1/M2/M3)**. Intel Mac support may be added in a future release.
 
@@ -121,8 +121,8 @@ npm run electron:build
 
 **Output:**
 ```
-release/ClipBoard Pro-1.1.1-arm64.dmg
-release/ClipBoard Pro-1.1.1-arm64-mac.zip
+release/ClipBoard Pro-1.2.0-arm64.dmg
+release/ClipBoard Pro-1.2.0-arm64-mac.zip
 release/mac-arm64/ClipBoard Pro.app
 ```
 
@@ -211,6 +211,14 @@ Vite proxy handles CORS in dev. In production Electron fetches Tenor API directl
 ---
 
 ## Changelog
+
+### v1.2.0 (2026-06-06) — Final Release
+- Complete macOS app with legacy icon and **ClipBoard Pro** branding
+- Global shortcut `⌃⌘V`, cursor popup, auto-paste into any app
+- Clipboard history (24h / 1h), pin, archive, delete
+- Emoji, GIF, special characters, text snippets
+- Customizable shortcut saved in Settings
+- Menu bar tray + background clipboard monitoring
 
 ### v1.1.1 (2026-06-06)
 - Renamed to **ClipBoard Pro**
