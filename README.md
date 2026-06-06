@@ -10,7 +10,7 @@
 
 ## বাংলায় দ্রুত শুরু
 
-1. **[Releases](https://github.com/Mostafijemon24/Clip-Board-Pro/releases)** থেকে `Clip Board Pro-1.1.0-arm64.dmg` ডাউনলোড করুন।
+1. **[Releases](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/latest)** থেকে `Clip.Board.Pro-1.1.0-arm64.dmg` ডাউনলোড করুন।
 2. DMG খুলে **Applications** ফোল্ডারে অ্যাপ টেনে রাখুন।
 3. প্রথমবার **Right-click → Open** দিয়ে চালু করুন (unsigned build)।
 4. **System Settings → Privacy & Security → Accessibility**-তে `Clip Board Pro` allow করুন।
@@ -25,8 +25,8 @@
 
 | File | Description |
 |------|-------------|
-| [**DMG Installer**](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/latest/download/Clip.Board.Pro-1.1.0-arm64.dmg) | Recommended — drag to Applications |
-| [**ZIP Archive**](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/latest/download/Clip.Board.Pro-1.1.0-arm64-mac.zip) | Portable `.app` bundle |
+| [**DMG Installer**](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/download/v1.1.0/Clip.Board.Pro-1.1.0-arm64.dmg) | Recommended — drag to Applications |
+| [**ZIP Archive**](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/download/v1.1.0/Clip.Board.Pro-1.1.0-arm64-mac.zip) | Portable `.app` bundle |
 
 > Requires **macOS 12+** on **Apple Silicon (M1/M2/M3)**. Intel Mac support may be added in a future release.
 
