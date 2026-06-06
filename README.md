@@ -1,4 +1,4 @@
-# Clip Board Pro
+# ClipBoard Pro
 
 **Premium macOS clipboard manager** — history, pins, emoji/GIF picker, snippets, global shortcut, and auto-paste into any app.
 
@@ -10,10 +10,10 @@
 
 ## বাংলায় দ্রুত শুরু
 
-1. **[Releases](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/latest)** থেকে `Clip.Board.Pro-1.1.0-arm64.dmg` ডাউনলোড করুন।
+1. **[Releases](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/latest)** থেকে `ClipBoard.Pro-1.1.1-arm64.dmg` ডাউনলোড করুন।
 2. DMG খুলে **Applications** ফোল্ডারে অ্যাপ টেনে রাখুন।
 3. প্রথমবার **Right-click → Open** দিয়ে চালু করুন (unsigned build)।
-4. **System Settings → Privacy & Security → Accessibility**-তে `Clip Board Pro` allow করুন।
+4. **System Settings → Privacy & Security → Accessibility**-তে `ClipBoard Pro` allow করুন।
 5. যেকোনো জায়গায় **`⌃⌘V`** (Control + Command + V) চাপুন — cursor-এ popup খুলবে।
 6. কোনো item ক্লিক করলে সেটা স্বয়ংক্রিয়ভাবে editor-এ paste হবে।
 
@@ -25,8 +25,8 @@
 
 | File | Description |
 |------|-------------|
-| [**DMG Installer**](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/download/v1.1.0/Clip.Board.Pro-1.1.0-arm64.dmg) | Recommended — drag to Applications |
-| [**ZIP Archive**](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/download/v1.1.0/Clip.Board.Pro-1.1.0-arm64-mac.zip) | Portable `.app` bundle |
+| [**DMG Installer**](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/download/v1.1.1/ClipBoard.Pro-1.1.1-arm64.dmg) | Recommended — drag to Applications |
+| [**ZIP Archive**](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/download/v1.1.1/ClipBoard.Pro-1.1.1-arm64-mac.zip) | Portable `.app` bundle |
 
 > Requires **macOS 12+** on **Apple Silicon (M1/M2/M3)**. Intel Mac support may be added in a future release.
 
@@ -121,9 +121,9 @@ npm run electron:build
 
 **Output:**
 ```
-release/Clip Board Pro-1.1.0-arm64.dmg
-release/Clip Board Pro-1.1.0-arm64-mac.zip
-release/mac-arm64/Clip Board Pro.app
+release/ClipBoard Pro-1.1.1-arm64.dmg
+release/ClipBoard Pro-1.1.1-arm64-mac.zip
+release/mac-arm64/ClipBoard Pro.app
 ```
 
 ### Web-only dev (browser)
@@ -138,7 +138,8 @@ npm run dev
 ## Project Structure
 
 ```
-Clip Board Pro/
+ClipBoard Pro/
+├── assets/icons/         # Legacy app icon (AppIcon.appiconset)
 ├── electron/
 │   ├── main.cjs          # Electron main process (tray, shortcut, clipboard)
 │   └── preload.cjs       # Secure IPC bridge
@@ -210,6 +211,10 @@ Vite proxy handles CORS in dev. In production Electron fetches Tenor API directl
 ---
 
 ## Changelog
+
+### v1.1.1 (2026-06-06)
+- Renamed to **ClipBoard Pro**
+- Restored **legacy app icon** from the original Swift version
 
 ### v1.1.0 (2026-06-06)
 - Full **Electron + React** rewrite with modern UI

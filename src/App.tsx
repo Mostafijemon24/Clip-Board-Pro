@@ -1099,7 +1099,7 @@ function SettingsPanel({
       value: historyOn,
       onToggle: onHistoryToggle,
     },
-    { key: "login",   label: "Launch at Login",  desc: "Start Clip Board Pro on startup",  value: toggles.login,   onToggle: () => toggle("login") },
+    { key: "login",   label: "Launch at Login",  desc: "Start ClipBoard Pro on startup",  value: toggles.login,   onToggle: () => toggle("login") },
     { key: "menubar", label: "Show in Menu Bar", desc: "Keep icon in the menu bar",         value: toggles.menubar, onToggle: () => toggle("menubar") },
     { key: "sound",   label: "Sound Effects",    desc: "Play sounds on copy",               value: toggles.sound,   onToggle: () => toggle("sound") },
   ];
@@ -1127,7 +1127,7 @@ function SettingsPanel({
         <ShortcutEditor current={shortcut} onSave={onShortcutSave} />
       </div>
       <div className="bg-neutral-100/40 border-t border-neutral-200 flex px-4 py-3 justify-between items-center">
-        <span className="text-neutral-500 text-xs">Clip Board Pro v1.0.0</span>
+        <span className="text-neutral-500 text-xs">ClipBoard Pro v1.1.1</span>
         <button className="underline underline-offset-2 text-neutral-950 text-xs">Check for updates</button>
       </div>
     </>

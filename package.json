@@ -1,8 +1,8 @@
 {
   "name": "clip-board-pro",
   "private": true,
-  "version": "1.1.0",
-  "description": "Clip Board Pro — macOS clipboard manager",
+  "version": "1.1.1",
+  "description": "ClipBoard Pro — macOS clipboard manager",
   "author": "Mostafij Emon",
   "repository": {
     "type": "git",
@@ -50,7 +50,7 @@
   },
   "build": {
     "appId": "com.clipboardpro.app",
-    "productName": "Clip Board Pro",
+    "productName": "ClipBoard Pro",
     "directories": {
       "output": "release"
     },
@@ -72,7 +72,7 @@
       "icon": "build/icon.icns",
       "extendInfo": {
         "LSUIElement": true,
-        "NSAppleEventsUsageDescription": "Clip Board Pro needs this permission to paste items into other applications."
+        "NSAppleEventsUsageDescription": "ClipBoard Pro needs this permission to paste items into other applications."
       }
     }
   }

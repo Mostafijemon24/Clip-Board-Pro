@@ -150,12 +150,12 @@ function createTray() {
     },
     { type: "separator" },
     {
-      label: "Quit Clip Board Pro",
+      label: "Quit ClipBoard Pro",
       click: () => app.quit(),
     },
   ]);
 
-  tray.setToolTip("Clip Board Pro");
+  tray.setToolTip("ClipBoard Pro");
   tray.setContextMenu(menu);
   tray.on("click", () => togglePopup());
 }

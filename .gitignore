@@ -9,9 +9,8 @@ release/
 node_modules/electron/dist/
 node_modules/electron/path.txt
 
-# Icons generated at build time
+# Icons generated at build time (source lives in assets/icons/)
 build/icon.icns
-build/trayTemplate.png
 
 # Environment & secrets
 .env
