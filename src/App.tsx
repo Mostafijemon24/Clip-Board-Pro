@@ -235,9 +235,15 @@ function ClipRow({
   const isImg  = item.type === "image";
   const isFile = item.type === "file";
 
+  const handleRowActivate = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    if ((e.target as HTMLElement).closest("button")) return;
+    copyToClipboard();
+  };
+
   return (
     <div
-      onClick={copyToClipboard}
+      onMouseDown={handleRowActivate}
       className={`bg-[oklch(0.985_0_0)] relative rounded-xl border flex transition-colors cursor-pointer hover:bg-neutral-100/80 ${
         isSelected ? "border-neutral-400" : "border-neutral-200"
       } ${isImg ? "p-3 flex-col gap-2" : "px-4 py-3 gap-2 justify-between items-center"}`}

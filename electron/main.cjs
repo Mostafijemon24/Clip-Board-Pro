@@ -21,6 +21,51 @@ let mainWindow = null;
 let tray = null;
 let currentShortcut = null;
 let lastClipboardKey = "";
+let targetAppForPaste = null;
+let isPasting = false;
+let blurHideTimer = null;
+
+function runAppleScript(script) {
+  return new Promise((resolve) => {
+    exec(`osascript -e ${JSON.stringify(script)}`, (err, stdout) => {
+      resolve({ err, stdout: stdout?.trim() ?? "" });
+    });
+  });
+}
+
+function escapeAppleScriptString(value) {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+async function captureFrontmostApp() {
+  const { stdout } = await runAppleScript(
+    'tell application "System Events" to get name of first application process whose frontmost is true'
+  );
+  const ownApps = new Set(["ClipBoard Pro", "Electron"]);
+  if (stdout && !ownApps.has(stdout)) {
+    targetAppForPaste = stdout;
+  }
+}
+
+async function pasteIntoTargetApp() {
+  if (targetAppForPaste) {
+    const appName = escapeAppleScriptString(targetAppForPaste);
+    await runAppleScript(`tell application "${appName}" to activate`);
+    await new Promise((r) => setTimeout(r, 180));
+  } else {
+    await new Promise((r) => setTimeout(r, 120));
+  }
+  await runAppleScript(
+    'tell application "System Events" to keystroke "v" using command down'
+  );
+}
+
+function hidePopup() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.hide();
+    mainWindow.webContents.send("popup-hidden");
+  }
+}
 
 function getPreloadPath() {
   return path.join(__dirname, "preload.cjs");
@@ -94,9 +139,18 @@ function createWindow() {
   }
 
   mainWindow.on("blur", () => {
-    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) {
-      mainWindow.hide();
-      mainWindow.webContents.send("popup-hidden");
+    if (blurHideTimer) clearTimeout(blurHideTimer);
+    blurHideTimer = setTimeout(() => {
+      blurHideTimer = null;
+      if (isPasting) return;
+      hidePopup();
+    }, 150);
+  });
+
+  mainWindow.on("focus", () => {
+    if (blurHideTimer) {
+      clearTimeout(blurHideTimer);
+      blurHideTimer = null;
     }
   });
 
@@ -105,14 +159,15 @@ function createWindow() {
   });
 }
 
-function togglePopup() {
+async function togglePopup() {
   if (!mainWindow) return;
 
   if (mainWindow.isVisible()) {
-    mainWindow.hide();
-    mainWindow.webContents.send("popup-hidden");
+    hidePopup();
     return;
   }
+
+  await captureFrontmostApp();
 
   const cursor = screen.getCursorScreenPoint();
   const { x, y } = clampPopupPosition(cursor.x, cursor.y);
@@ -120,13 +175,6 @@ function togglePopup() {
   mainWindow.show();
   mainWindow.focus();
   mainWindow.webContents.send("popup-shown", { x: cursor.x, y: cursor.y });
-}
-
-function simulatePaste() {
-  exec(
-    `osascript -e 'tell application "System Events" to keystroke "v" using command down'`,
-    () => {}
-  );
 }
 
 function createTray() {
@@ -195,41 +243,47 @@ function setupIpc() {
   ipcMain.handle("register-shortcut", (_, config) => registerGlobalShortcut(config));
 
   ipcMain.handle("hide-popup", () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.hide();
-      mainWindow.webContents.send("popup-hidden");
-    }
+    hidePopup();
   });
 
   ipcMain.handle("show-popup", () => {
-    togglePopup();
+    void togglePopup();
   });
 
   ipcMain.handle("paste-text", async (_, text) => {
-    clipboard.writeText(text);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.hide();
-      mainWindow.webContents.send("popup-hidden");
+    isPasting = true;
+    if (blurHideTimer) {
+      clearTimeout(blurHideTimer);
+      blurHideTimer = null;
     }
-    await new Promise((r) => setTimeout(r, 120));
-    simulatePaste();
+    try {
+      clipboard.writeText(text);
+      hidePopup();
+      await pasteIntoTargetApp();
+    } finally {
+      isPasting = false;
+    }
   });
 
   ipcMain.handle("paste-image", async (_, dataUrl) => {
+    isPasting = true;
+    if (blurHideTimer) {
+      clearTimeout(blurHideTimer);
+      blurHideTimer = null;
+    }
     try {
       const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, "");
       const buffer = Buffer.from(base64, "base64");
       const image = nativeImage.createFromBuffer(buffer);
       clipboard.writeImage(image);
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.hide();
-        mainWindow.webContents.send("popup-hidden");
-      }
-      await new Promise((r) => setTimeout(r, 120));
-      simulatePaste();
+      hidePopup();
+      await pasteIntoTargetApp();
     } catch {
       clipboard.writeText(dataUrl);
-      simulatePaste();
+      hidePopup();
+      await pasteIntoTargetApp();
+    } finally {
+      isPasting = false;
     }
   });
 
