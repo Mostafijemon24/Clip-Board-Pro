@@ -20,5 +20,10 @@ for i in $(seq 1 40); do
   fi
 done
 
+echo ""
+echo "⚠  DEV MODE: auto-paste needs Accessibility permission for Electron (not ClipBoard Pro)."
+echo "   System Settings → Privacy & Security → Accessibility → enable Electron"
+echo ""
+
 echo "▶ Launching Electron..."
 npx electron .

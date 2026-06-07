@@ -238,6 +238,7 @@ function ClipRow({
   const handleRowActivate = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     if ((e.target as HTMLElement).closest("button")) return;
+    e.preventDefault();
     copyToClipboard();
   };
 
@@ -267,7 +268,7 @@ function ClipRow({
           </div>
           <div className="flex items-center gap-1.5">
             <Image className="size-3 text-neutral-400" />
-            <span className="text-[10px] text-neutral-400 truncate">{item.filename ?? "Image"} · click to copy</span>
+            <span className="text-[10px] text-neutral-400 truncate">{item.filename ?? "Image"} · click to paste</span>
           </div>
         </>
       )}
@@ -361,6 +362,8 @@ export default function App() {
   const [visible, setVisible] = useState(!inElectron);
   const [popupPos, setPopupPos] = useState<{ x: number; y: number }>({ x: 100, y: 100 });
   const [shortcut, setShortcut] = useState<ShortcutConfig>(loadShortcut);
+  const [pasteError, setPasteError] = useState<string | null>(null);
+  const [accessibilityAppName, setAccessibilityAppName] = useState("ClipBoard Pro");
   const lastClip    = useRef<string>("");
   const mousePos    = useRef<{ x: number; y: number }>({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
   const lastFocused = useRef<HTMLElement | null>(null);
@@ -443,9 +446,20 @@ export default function App() {
   }, [inElectron, visible, hidePopup]);
 
   /* ── Auto-paste into last focused element / system editor ── */
-  const pasteToFocused = useCallback((text: string) => {
+  const handlePasteResult = useCallback((result: { ok: boolean; error?: string; needsAccessibility?: boolean } | void) => {
+    if (!result || result.ok) {
+      setPasteError(null);
+      return;
+    }
+    setPasteError(result.error ?? "Auto-paste failed.");
+    if (result.needsAccessibility) {
+      setNavTab("settings");
+    }
+  }, []);
+
+  const pasteToFocused = useCallback(async (text: string) => {
     if (inElectron && window.electronAPI) {
-      void window.electronAPI.pasteText(text);
+      handlePasteResult(await window.electronAPI.pasteText(text));
       return;
     }
     hidePopup();
@@ -462,16 +476,16 @@ export default function App() {
         document.execCommand("insertText", false, text);
       }
     });
-  }, [inElectron, hidePopup]);
+  }, [inElectron, hidePopup, handlePasteResult]);
 
-  const pasteItemToSystem = useCallback((item: ClipItem) => {
+  const pasteItemToSystem = useCallback(async (item: ClipItem) => {
     if (!inElectron || !window.electronAPI) return;
     if (item.type === "text" || item.type === "file") {
-      void window.electronAPI.pasteText(item.value);
+      handlePasteResult(await window.electronAPI.pasteText(item.value));
     } else if (item.type === "image") {
-      void window.electronAPI.pasteImage(item.value);
+      handlePasteResult(await window.electronAPI.pasteImage(item.value));
     }
-  }, [inElectron]);
+  }, [inElectron, handlePasteResult]);
 
   /* Persist snippets */
   useEffect(() => { saveSnippets(snippets); }, [snippets]);
@@ -594,6 +608,13 @@ export default function App() {
   useEffect(() => {
     if (!inElectron || !window.electronAPI) return;
     const api = window.electronAPI;
+
+    void api.checkAccessibility().then(({ granted, appName }) => {
+      setAccessibilityAppName(appName);
+      if (!granted) {
+        setPasteError(`Allow ${appName} in System Settings → Privacy & Security → Accessibility for auto-paste.`);
+      }
+    });
 
     void api.registerShortcut(shortcut);
 
@@ -801,6 +822,18 @@ export default function App() {
             );
           })}
         </div>
+
+        {inElectron && pasteError && (
+          <div className="bg-amber-50 border-b border-amber-200 px-4 py-2.5 flex-shrink-0">
+            <p className="text-[11px] leading-4 text-amber-950">{pasteError}</p>
+            <button
+              onClick={() => void window.electronAPI?.openAccessibilitySettings()}
+              className="mt-1 text-[11px] font-medium text-amber-900 underline underline-offset-2"
+            >
+              Open Accessibility Settings
+            </button>
+          </div>
+        )}
 
         {/* Content */}
         <div className="flex flex-col flex-1 overflow-hidden">
@@ -1072,6 +1105,7 @@ export default function App() {
                     localStorage.setItem(SHORTCUT_KEY, JSON.stringify(s));
                     if (inElectron) void window.electronAPI?.registerShortcut(s);
                   }}
+                  accessibilityAppName={accessibilityAppName}
                 />
               </div>
             </div>
@@ -1086,16 +1120,24 @@ export default function App() {
 }
 
 function SettingsPanel({
-  historyOn, onHistoryToggle, shortcut, onShortcutSave,
+  historyOn, onHistoryToggle, shortcut, onShortcutSave, accessibilityAppName,
 }: {
   historyOn: boolean;
   onHistoryToggle: () => void;
   shortcut: ShortcutConfig;
   onShortcutSave: (s: ShortcutConfig) => void;
+  accessibilityAppName: string;
 }) {
   const [toggles, setToggles] = useState({ login: false, menubar: true, sound: false });
+  const [accessibilityGranted, setAccessibilityGranted] = useState<boolean | null>(null);
   const toggle = (key: keyof typeof toggles) =>
     setToggles((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  useEffect(() => {
+    void window.electronAPI?.checkAccessibility().then(({ granted }) => {
+      setAccessibilityGranted(granted);
+    });
+  }, []);
 
   const settings: { key: string; label: string; desc: string; value: boolean; onToggle: () => void }[] = [
     {
@@ -1113,6 +1155,28 @@ function SettingsPanel({
   return (
     <>
       <div className="px-4 pb-4 flex flex-col gap-3">
+        <div className="rounded-xl border border-neutral-200 bg-[oklch(0.985_0_0)] px-4 py-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-neutral-950">Auto-Paste Permission</p>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                Enable <span className="font-medium">{accessibilityAppName}</span> in Accessibility so clicks paste into the previous app.
+              </p>
+            </div>
+            <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${
+              accessibilityGranted ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"
+            }`}>
+              {accessibilityGranted === null ? "..." : accessibilityGranted ? "Allowed" : "Required"}
+            </span>
+          </div>
+          <button
+            onClick={() => void window.electronAPI?.openAccessibilitySettings()}
+            className="mt-3 text-xs font-medium text-neutral-950 underline underline-offset-2"
+          >
+            Open System Settings → Accessibility
+          </button>
+        </div>
+
         {settings.map(({ key, label, desc, value, onToggle }) => (
           <button
             key={key}
@@ -1133,7 +1197,7 @@ function SettingsPanel({
         <ShortcutEditor current={shortcut} onSave={onShortcutSave} />
       </div>
       <div className="bg-neutral-100/40 border-t border-neutral-200 flex px-4 py-3 justify-between items-center">
-        <span className="text-neutral-500 text-xs">ClipBoard Pro v1.2.0</span>
+        <span className="text-neutral-500 text-xs">ClipBoard Pro v1.2.1</span>
         <button className="underline underline-offset-2 text-neutral-950 text-xs">Check for updates</button>
       </div>
     </>

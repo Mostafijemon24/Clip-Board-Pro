@@ -8,6 +8,8 @@ const {
   ipcMain,
   clipboard,
   nativeImage,
+  systemPreferences,
+  shell,
 } = require("electron");
 const path = require("path");
 const { exec } = require("child_process");
@@ -23,8 +25,17 @@ let tray = null;
 let currentShortcut = null;
 let lastClipboardKey = "";
 let targetAppForPaste = null;
+let targetAppPid = null;
+let lastExternalApp = null;
+let lastExternalPid = null;
 let isPasting = false;
 let blurHideTimer = null;
+
+const OWN_APPS = new Set(["ClipBoard Pro", "Electron"]);
+
+function accessibilityAppLabel() {
+  return isDev ? "Electron" : "ClipBoard Pro";
+}
 
 function runAppleScript(script) {
   return new Promise((resolve) => {
@@ -38,27 +49,122 @@ function escapeAppleScriptString(value) {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
-async function captureFrontmostApp() {
-  const { stdout } = await runAppleScript(
-    'tell application "System Events" to get name of first application process whose frontmost is true'
-  );
-  const ownApps = new Set(["ClipBoard Pro", "Electron"]);
-  if (stdout && !ownApps.has(stdout)) {
-    targetAppForPaste = stdout;
+function isOwnApp(name) {
+  return !name || OWN_APPS.has(name);
+}
+
+function rememberExternalApp(name, pid) {
+  if (!name || isOwnApp(name)) return;
+  lastExternalApp = name;
+  lastExternalPid = pid;
+}
+
+async function queryFrontmostApp() {
+  const { err, stdout } = await runAppleScript(`
+    tell application "System Events"
+      set p to first application process whose frontmost is true
+      return (name of p) & "|" & (unix id of p as text)
+    end tell
+  `);
+  if (err || !stdout || !stdout.includes("|")) {
+    return { name: null, pid: null };
   }
+  const [name, pidRaw] = stdout.split("|");
+  const pid = Number.parseInt(pidRaw, 10);
+  return {
+    name: name || null,
+    pid: Number.isFinite(pid) ? pid : null,
+  };
+}
+
+async function refreshFrontmostApp() {
+  const { name, pid } = await queryFrontmostApp();
+  if (name && !isOwnApp(name)) {
+    rememberExternalApp(name, pid);
+    return { name, pid };
+  }
+  return { name: null, pid: null };
+}
+
+async function captureFrontmostApp() {
+  const current = await refreshFrontmostApp();
+  targetAppForPaste = current.name ?? lastExternalApp;
+  targetAppPid = current.pid ?? lastExternalPid;
+}
+
+function hasAccessibilityPermission(prompt = false) {
+  if (process.platform !== "darwin") return true;
+  return systemPreferences.isTrustedAccessibilityClient(prompt);
+}
+
+function openAccessibilitySettings() {
+  void shell.openExternal(
+    "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility"
+  );
 }
 
 async function pasteIntoTargetApp() {
-  if (targetAppForPaste) {
-    const appName = escapeAppleScriptString(targetAppForPaste);
-    await runAppleScript(`tell application "${appName}" to activate`);
-    await new Promise((r) => setTimeout(r, 180));
-  } else {
-    await new Promise((r) => setTimeout(r, 120));
+  const targetName = targetAppForPaste || lastExternalApp;
+  const targetPid = targetAppPid || lastExternalPid;
+
+  if (!hasAccessibilityPermission(true)) {
+    return {
+      ok: false,
+      needsAccessibility: true,
+      error: `${accessibilityAppLabel()} needs Accessibility permission to auto-paste.`,
+    };
   }
-  await runAppleScript(
-    'tell application "System Events" to keystroke "v" using command down'
-  );
+
+  hidePopup();
+  if (process.platform === "darwin") {
+    app.hide();
+  }
+
+  await new Promise((r) => setTimeout(r, 120));
+
+  let pasteErr = null;
+
+  if (targetPid) {
+    const { err } = await runAppleScript(`
+      tell application "System Events"
+        set frontmost of (first process whose unix id is ${targetPid}) to true
+      end tell
+      delay 0.35
+      tell application "System Events" to keystroke "v" using command down
+    `);
+    pasteErr = err;
+  }
+
+  if (pasteErr && targetName) {
+    const name = escapeAppleScriptString(targetName);
+    const { err } = await runAppleScript(`
+      tell application "${name}" to activate
+      delay 0.35
+      tell application "System Events" to tell process "${name}" to keystroke "v" using command down
+    `);
+    pasteErr = err;
+  }
+
+  if (pasteErr && !targetName && !targetPid) {
+    const { err } = await runAppleScript(
+      'delay 0.2\ntell application "System Events" to keystroke "v" using command down'
+    );
+    pasteErr = err;
+  }
+
+  if (pasteErr) {
+    const msg = pasteErr.message || String(pasteErr);
+    if (msg.includes("1002") || msg.includes("not allowed")) {
+      return {
+        ok: false,
+        needsAccessibility: true,
+        error: `Allow ${accessibilityAppLabel()} in System Settings → Privacy & Security → Accessibility.`,
+      };
+    }
+    return { ok: false, error: msg };
+  }
+
+  return { ok: true };
 }
 
 function hidePopup() {
@@ -89,7 +195,19 @@ function registerGlobalShortcut(config) {
     currentShortcut = null;
   }
   const accelerator = shortcutToAccelerator(config);
-  const ok = globalShortcut.register(accelerator, () => togglePopup());
+  const ok = globalShortcut.register(accelerator, () => {
+    void (async () => {
+      const current = await refreshFrontmostApp();
+      if (current.name) {
+        targetAppForPaste = current.name;
+        targetAppPid = current.pid;
+      } else if (lastExternalApp) {
+        targetAppForPaste = lastExternalApp;
+        targetAppPid = lastExternalPid;
+      }
+      await togglePopup();
+    })();
+  });
   if (ok) currentShortcut = accelerator;
   return ok;
 }
@@ -180,6 +298,13 @@ async function togglePopup() {
   mainWindow.webContents.send("popup-shown", { x: cursor.x, y: cursor.y });
 }
 
+function rememberTargetFromLastExternal() {
+  if (lastExternalApp) {
+    targetAppForPaste = lastExternalApp;
+    targetAppPid = lastExternalPid;
+  }
+}
+
 function createTray() {
   const iconPath = path.join(__dirname, "../build/trayTemplate.png");
   let icon;
@@ -197,7 +322,10 @@ function createTray() {
   const menu = Menu.buildFromTemplate([
     {
       label: "Open Clipboard",
-      click: () => togglePopup(),
+      click: () => {
+        rememberTargetFromLastExternal();
+        void togglePopup();
+      },
     },
     { type: "separator" },
     {
@@ -208,7 +336,10 @@ function createTray() {
 
   tray.setToolTip("ClipBoard Pro");
   tray.setContextMenu(menu);
-  tray.on("click", () => togglePopup());
+  tray.on("click", () => {
+    rememberTargetFromLastExternal();
+    void togglePopup();
+  });
 }
 
 function pollClipboard() {
@@ -242,6 +373,20 @@ function pollClipboard() {
   }
 }
 
+async function performPaste(writeFn) {
+  isPasting = true;
+  if (blurHideTimer) {
+    clearTimeout(blurHideTimer);
+    blurHideTimer = null;
+  }
+  try {
+    writeFn();
+    return await pasteIntoTargetApp();
+  } finally {
+    isPasting = false;
+  }
+}
+
 function setupIpc() {
   ipcMain.handle("register-shortcut", (_, config) => registerGlobalShortcut(config));
 
@@ -253,40 +398,29 @@ function setupIpc() {
     void togglePopup();
   });
 
+  ipcMain.handle("check-accessibility", () => ({
+    granted: hasAccessibilityPermission(false),
+    appName: accessibilityAppLabel(),
+  }));
+
+  ipcMain.handle("open-accessibility-settings", () => {
+    openAccessibilitySettings();
+  });
+
   ipcMain.handle("paste-text", async (_, text) => {
-    isPasting = true;
-    if (blurHideTimer) {
-      clearTimeout(blurHideTimer);
-      blurHideTimer = null;
-    }
-    try {
-      clipboard.writeText(text);
-      hidePopup();
-      await pasteIntoTargetApp();
-    } finally {
-      isPasting = false;
-    }
+    return performPaste(() => clipboard.writeText(text));
   });
 
   ipcMain.handle("paste-image", async (_, dataUrl) => {
-    isPasting = true;
-    if (blurHideTimer) {
-      clearTimeout(blurHideTimer);
-      blurHideTimer = null;
-    }
     try {
-      const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, "");
-      const buffer = Buffer.from(base64, "base64");
-      const image = nativeImage.createFromBuffer(buffer);
-      clipboard.writeImage(image);
-      hidePopup();
-      await pasteIntoTargetApp();
+      return await performPaste(() => {
+        const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, "");
+        const buffer = Buffer.from(base64, "base64");
+        const image = nativeImage.createFromBuffer(buffer);
+        clipboard.writeImage(image);
+      });
     } catch {
-      clipboard.writeText(dataUrl);
-      hidePopup();
-      await pasteIntoTargetApp();
-    } finally {
-      isPasting = false;
+      return performPaste(() => clipboard.writeText(dataUrl));
     }
   });
 
@@ -306,6 +440,15 @@ app.whenReady().then(() => {
   registerGlobalShortcut({ ctrl: true, meta: true, alt: false, shift: false, key: "V" });
 
   setInterval(pollClipboard, 600);
+  setInterval(() => {
+    void refreshFrontmostApp();
+  }, 200);
+
+  setTimeout(() => {
+    if (!hasAccessibilityPermission(false)) {
+      hasAccessibilityPermission(true);
+    }
+  }, 1500);
 
   app.on("activate", () => {
     if (!mainWindow) createWindow();

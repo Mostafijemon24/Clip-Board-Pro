@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   showPopup: () => ipcRenderer.invoke("show-popup"),
   pasteText: (text) => ipcRenderer.invoke("paste-text", text),
   pasteImage: (dataUrl) => ipcRenderer.invoke("paste-image", dataUrl),
+  checkAccessibility: () => ipcRenderer.invoke("check-accessibility"),
+  openAccessibilitySettings: () => ipcRenderer.invoke("open-accessibility-settings"),
   getCursorPoint: () => ipcRenderer.invoke("get-cursor-point"),
   onPopupShown: (cb) => {
     const handler = (_, data) => cb(data);
