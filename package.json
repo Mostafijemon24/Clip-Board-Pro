@@ -1,7 +1,7 @@
 {
   "name": "clip-board-pro",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "ClipBoard Pro — macOS clipboard manager",
   "author": "Mostafij Emon",
   "repository": {
@@ -23,6 +23,7 @@
     "electron:build": "npm run build && node scripts/create-icons.js && node scripts/fix-electron.js && electron-builder --mac",
     "electron:pack": "npm run build && node scripts/create-icons.js && node scripts/fix-electron.js && electron-builder --mac --dir",
     "electron:fix": "node scripts/sign-mac-app.js",
+    "electron:open-fix": "bash scripts/fix-gatekeeper.sh",
     "postinstall": "node scripts/fix-electron.js"
   },
   "dependencies": {
@@ -60,6 +61,16 @@
       "dist/**/*",
       "electron/**/*",
       "build/entitlements.mac.plist"
+    ],
+    "extraResources": [
+      {
+        "from": "scripts/fix-gatekeeper.sh",
+        "to": "fix-gatekeeper.sh"
+      },
+      {
+        "from": "build/entitlements.mac.plist",
+        "to": "entitlements.mac.plist"
+      }
     ],
     "asar": true,
     "mac": {

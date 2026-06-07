@@ -10,12 +10,22 @@
 
 ## বাংলায় দ্রুত শুরু
 
-1. **[Releases](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/latest)** থেকে `ClipBoard.Pro-1.2.0-arm64.dmg` ডাউনলোড করুন।
+1. **[Releases](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/latest)** থেকে `ClipBoard.Pro-1.2.1-arm64.dmg` ডাউনলোড করুন।
 2. DMG খুলে **Applications** ফোল্ডারে অ্যাপ টেনে রাখুন।
-3. প্রথমবার **Right-click → Open** দিয়ে চালু করুন (unsigned build)।
-4. **System Settings → Privacy & Security → Accessibility**-তে `ClipBoard Pro` allow করুন।
-5. যেকোনো জায়গায় **`⌃⌘V`** (Control + Command + V) চাপুন — cursor-এ popup খুলবে।
-6. কোনো item ক্লিক করলে সেটা স্বয়ংক্রিয়ভাবে editor-এ paste হবে।
+3. প্রথমবার খুলতে **Terminal** খুলে এই কমান্ড চালান:
+   ```bash
+   bash "/Applications/ClipBoard Pro.app/Contents/Resources/fix-gatekeeper.sh"
+   ```
+   অথবা ম্যানুয়ালি:
+   ```bash
+   xattr -cr "/Applications/ClipBoard Pro.app"
+   codesign --force --deep --sign - --timestamp=none "/Applications/ClipBoard Pro.app"
+   open "/Applications/ClipBoard Pro.app"
+   ```
+4. যদি এখনও **Unverified** দেখায় — **System Settings → Privacy & Security** → নিচে scroll → **Open Anyway** চাপুন।
+5. **System Settings → Privacy & Security → Accessibility**-তে `ClipBoard Pro` allow করুন।
+6. যেকোনো জায়গায় **`⌃⌘V`** (Control + Command + V) চাপুন — cursor-এ popup খুলবে।
+7. কোনো item ক্লিক করলে সেটা স্বয়ংক্রিয়ভাবে editor-এ paste হবে।
 
 > এটি **menu bar app** — Dock-এ আইকন দেখা নাও যেতে পারে। Menu bar-এর clipboard icon বা shortcut ব্যবহার করুন।
 
@@ -25,8 +35,8 @@
 
 | File | Description |
 |------|-------------|
-| [**DMG Installer**](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/download/v1.2.0/ClipBoard.Pro-1.2.0-arm64.dmg) | Recommended — drag to Applications |
-| [**ZIP Archive**](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/download/v1.2.0/ClipBoard.Pro-1.2.0-arm64-mac.zip) | Portable `.app` bundle |
+| [**DMG Installer**](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/download/v1.2.1/ClipBoard.Pro-1.2.1-arm64.dmg) | Recommended — drag to Applications |
+| [**ZIP Archive**](https://github.com/Mostafijemon24/Clip-Board-Pro/releases/download/v1.2.1/ClipBoard.Pro-1.2.1-arm64-mac.zip) | Portable `.app` bundle |
 
 > Requires **macOS 12+** on **Apple Silicon (M1/M2/M3)**. Intel Mac support may be added in a future release.
 
@@ -121,8 +131,8 @@ npm run electron:build
 
 **Output:**
 ```
-release/ClipBoard Pro-1.2.0-arm64.dmg
-release/ClipBoard Pro-1.2.0-arm64-mac.zip
+release/ClipBoard Pro-1.2.1-arm64.dmg
+release/ClipBoard Pro-1.2.1-arm64-mac.zip
 release/mac-arm64/ClipBoard Pro.app
 ```
 
@@ -171,8 +181,26 @@ Grant in: **System Settings → Privacy & Security → Accessibility**
 
 ## Troubleshooting
 
-### App won't open (Gatekeeper)
-Right-click the app → **Open** → confirm. Unsigned local builds trigger this warning.
+### App won't open / shows "Unverified" (Gatekeeper)
+
+macOS blocks unsigned downloaded apps. Fix in Terminal:
+
+```bash
+bash scripts/fix-gatekeeper.sh "/Applications/ClipBoard Pro.app"
+```
+
+Or from the project:
+
+```bash
+npm run electron:open-fix
+```
+
+If it still won't open on **macOS Sequoia+**:
+1. Double-click the app once (dismiss the error)
+2. **System Settings → Privacy & Security** → scroll to **Security**
+3. Click **Open Anyway** next to ClipBoard Pro
+
+> Right-click → Open alone may not work on newer macOS versions.
 
 ### `Electron failed to install` / `Framework not loaded`
 ```bash
@@ -211,6 +239,11 @@ Vite proxy handles CORS in dev. In production Electron fetches Tenor API directl
 ---
 
 ## Changelog
+
+### v1.2.1 (2026-06-07)
+- Improved macOS Gatekeeper fix — bundled `fix-gatekeeper.sh` inside the app
+- Recursive ad-hoc signing for all Electron binaries before DMG packaging
+- Updated install instructions for macOS Sequoia+ (Open Anyway flow)
 
 ### v1.2.0 (2026-06-06) — Final Release
 - Complete macOS app with legacy icon and **ClipBoard Pro** branding
