@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   registerShortcut: (config) => ipcRenderer.invoke("register-shortcut", config),
   hidePopup: () => ipcRenderer.invoke("hide-popup"),
   showPopup: () => ipcRenderer.invoke("show-popup"),
+  preparePaste: () => ipcRenderer.invoke("prepare-paste"),
   pasteText: (text) => ipcRenderer.invoke("paste-text", text),
   pasteImage: (dataUrl) => ipcRenderer.invoke("paste-image", dataUrl),
   checkAccessibility: () => ipcRenderer.invoke("check-accessibility"),

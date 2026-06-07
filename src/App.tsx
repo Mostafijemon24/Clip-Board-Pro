@@ -239,6 +239,8 @@ function ClipRow({
     if (e.button !== 0) return;
     if ((e.target as HTMLElement).closest("button")) return;
     e.preventDefault();
+    e.stopPropagation();
+    void (onPaste && window.electronAPI?.preparePaste?.());
     copyToClipboard();
   };
 

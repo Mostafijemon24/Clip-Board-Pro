@@ -23,6 +23,7 @@ export interface ElectronAPI {
   hidePopup: () => Promise<void>;
   showPopup: () => Promise<void>;
   pasteText: (text: string) => Promise<PasteResult>;
+  preparePaste: () => Promise<void>;
   pasteImage: (dataUrl: string) => Promise<PasteResult>;
   checkAccessibility: () => Promise<AccessibilityStatus>;
   openAccessibilitySettings: () => Promise<void>;
