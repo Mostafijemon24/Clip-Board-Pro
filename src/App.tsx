@@ -755,7 +755,7 @@ export default function App() {
     </button>
   ) : null;
 
-  const showPopup = inElectron || visible;
+  const showPopup = visible;
 
   return (
     <>
@@ -768,7 +768,7 @@ export default function App() {
           style={inElectron ? undefined : { left: popupPos.x, top: popupPos.y, width: 400 }}
           className={
             inElectron
-              ? "w-full h-screen text-neutral-950 rounded-2xl border border-neutral-200/80 bg-white overflow-hidden flex flex-col"
+              ? "w-full h-full text-neutral-950 rounded-2xl border border-neutral-200/80 bg-white overflow-hidden flex flex-col"
               : "fixed z-[9998] text-neutral-950 shadow-[0_16px_64px_0_oklch(0.145_0_0/0.22)] rounded-2xl border border-neutral-200 bg-white overflow-hidden flex flex-col"
           }
         >

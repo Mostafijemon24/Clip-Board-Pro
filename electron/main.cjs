@@ -16,6 +16,7 @@ const isDev = !app.isPackaged;
 const POPUP_W = 400;
 const POPUP_H = 560;
 const PAD = 10;
+const OFFSCREEN = { x: -10000, y: -10000 };
 
 let mainWindow = null;
 let tray = null;
@@ -62,6 +63,7 @@ async function pasteIntoTargetApp() {
 
 function hidePopup() {
   if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setPosition(OFFSCREEN.x, OFFSCREEN.y);
     mainWindow.hide();
     mainWindow.webContents.send("popup-hidden");
   }
@@ -118,12 +120,11 @@ function createWindow() {
     show: false,
     frame: false,
     transparent: true,
+    backgroundColor: "#00000000",
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: false,
     hasShadow: true,
-    vibrancy: "under-window",
-    visualEffectState: "active",
     webPreferences: {
       preload: getPreloadPath(),
       contextIsolation: true,
@@ -131,6 +132,8 @@ function createWindow() {
       sandbox: false,
     },
   });
+
+  mainWindow.setPosition(OFFSCREEN.x, OFFSCREEN.y);
 
   if (isDev) {
     mainWindow.loadURL("http://localhost:5173");

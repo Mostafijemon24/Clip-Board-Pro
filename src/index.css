@@ -1,10 +1,10 @@
 @import "tailwindcss";
 @import "./tw-animate.css";
 
-.h-screen {
+html:not(.electron) .h-screen {
   height: 956px !important;
 }
-.min-h-screen {
+html:not(.electron) .min-h-screen {
   min-height: 956px !important;
 }
 
@@ -29,6 +29,8 @@ html.electron body,
 html.electron #root {
   background: transparent;
   overflow: hidden;
+  width: 100%;
+  height: 100%;
 }
 
 :root {
