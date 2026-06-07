@@ -36,6 +36,19 @@ let blurHideTimer = null;
 
 const OWN_APPS = new Set(["ClipBoard Pro", "Electron"]);
 
+let nutModule = null;
+
+function getNutModule() {
+  if (!nutModule) {
+    nutModule = require("@nut-tree-fork/nut-js");
+  }
+  return nutModule;
+}
+
+function delay(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 function accessibilityAppLabel() {
   return isDev ? "Electron" : "ClipBoard Pro";
 }
@@ -152,73 +165,87 @@ async function pasteIntoTargetApp() {
   const targetBundleId = targetAppBundleId || lastExternalBundleId;
   const clickPoint = lastTargetClickPoint;
 
-  if (!hasAccessibilityPermission(true)) {
-    return {
-      ok: false,
-      needsAccessibility: true,
-      error: `${accessibilityAppLabel()} needs Accessibility permission to auto-paste.`,
-    };
-  }
-
   hidePopup();
   if (process.platform === "darwin") {
     app.hide();
   }
 
-  await new Promise((r) => setTimeout(r, 120));
+  await delay(150);
 
   activateTargetApp(targetName, targetBundleId);
-  await new Promise((r) => setTimeout(r, 350));
+  await delay(450);
 
   const x = clickPoint?.x ?? null;
   const y = clickPoint?.y ?? null;
-  let pasteErr = null;
 
-  if (x != null && y != null) {
-    const { err } = await runAppleScript(`
-      tell application "System Events"
-        click at {${Math.round(x)}, ${Math.round(y)}}
-        delay 0.12
-        keystroke "v" using command down
-      end tell
-    `);
-    pasteErr = err;
-  }
+  try {
+    const { mouse, keyboard, Key, Point, Button } = getNutModule();
 
-  if (pasteErr && targetName) {
-    const name = escapeAppleScriptString(targetName);
-    const { err } = await runAppleScript(`
-      tell application "System Events"
-        tell process "${name}"
-          set frontmost to true
-        end tell
-        delay 0.2
-        keystroke "v" using command down
-      end tell
-    `);
-    pasteErr = err;
-  }
+    if (x != null && y != null) {
+      await mouse.setPosition(new Point(Math.round(x), Math.round(y)));
+      await mouse.click(Button.LEFT);
+      await delay(150);
+    }
 
-  if (pasteErr && !targetName) {
-    const { err } = await runAppleScript(
-      'tell application "System Events" to keystroke "v" using command down'
-    );
-    pasteErr = err;
-  }
+    await keyboard.pressKey(Key.LeftSuper, Key.V);
+    await keyboard.releaseKey(Key.LeftSuper, Key.V);
+    return { ok: true };
+  } catch (nutErr) {
+    let pasteErr = nutErr;
 
-  if (pasteErr) {
-    const msg = pasteErr.message || String(pasteErr);
-    if (msg.includes("1002") || msg.includes("not allowed")) {
+    if (x != null && y != null) {
+      try {
+        const { err } = await runAppleScript(`
+          tell application "System Events"
+            click at {${Math.round(x)}, ${Math.round(y)}}
+            delay 0.15
+            keystroke "v" using command down
+          end tell
+        `);
+        if (!err) return { ok: true };
+        pasteErr = err;
+      } catch (scriptErr) {
+        pasteErr = scriptErr;
+      }
+    }
+
+    if (targetName) {
+      try {
+        const name = escapeAppleScriptString(targetName);
+        const { err } = await runAppleScript(`
+          tell application "System Events"
+            tell process "${name}"
+              set frontmost to true
+            end tell
+            delay 0.2
+            keystroke "v" using command down
+          end tell
+        `);
+        if (!err) return { ok: true };
+        pasteErr = err;
+      } catch (scriptErr) {
+        pasteErr = scriptErr;
+      }
+    }
+
+    const msg = pasteErr?.message || String(pasteErr);
+    const needsAccessibility =
+      !hasAccessibilityPermission(false) ||
+      msg.includes("1002") ||
+      msg.includes("not allowed") ||
+      msg.includes("accessibility");
+
+    if (needsAccessibility) {
+      hasAccessibilityPermission(true);
       return {
         ok: false,
         needsAccessibility: true,
-        error: `Allow ${accessibilityAppLabel()} in System Settings → Privacy & Security → Accessibility, then restart the app.`,
+        error: `Allow ${accessibilityAppLabel()} in Accessibility, then restart the app.\nPath: ${process.execPath}`,
       };
     }
+
     return { ok: false, error: msg };
   }
-
-  return { ok: true };
 }
 
 function hidePopup() {
@@ -450,6 +477,7 @@ function setupIpc() {
   ipcMain.handle("check-accessibility", () => ({
     granted: hasAccessibilityPermission(false),
     appName: accessibilityAppLabel(),
+    appPath: process.execPath,
   }));
 
   ipcMain.handle("open-accessibility-settings", () => {

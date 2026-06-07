@@ -15,6 +15,7 @@ export interface PasteResult {
 export interface AccessibilityStatus {
   granted: boolean;
   appName: string;
+  appPath: string;
 }
 
 export interface ElectronAPI {

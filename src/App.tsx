@@ -1132,12 +1132,14 @@ function SettingsPanel({
 }) {
   const [toggles, setToggles] = useState({ login: false, menubar: true, sound: false });
   const [accessibilityGranted, setAccessibilityGranted] = useState<boolean | null>(null);
+  const [accessibilityPath, setAccessibilityPath] = useState("");
   const toggle = (key: keyof typeof toggles) =>
     setToggles((prev) => ({ ...prev, [key]: !prev[key] }));
 
   useEffect(() => {
-    void window.electronAPI?.checkAccessibility().then(({ granted }) => {
+    void window.electronAPI?.checkAccessibility().then(({ granted, appPath }) => {
       setAccessibilityGranted(granted);
+      setAccessibilityPath(appPath);
     });
   }, []);
 
@@ -1177,6 +1179,12 @@ function SettingsPanel({
           >
             Open System Settings → Accessibility
           </button>
+          {accessibilityPath && (
+            <p className="text-[10px] text-neutral-400 mt-2 break-all leading-4">
+              App path: {accessibilityPath}
+              {!accessibilityGranted && " — remove old entry, click +, add this app, then restart."}
+            </p>
+          )}
         </div>
 
         {settings.map(({ key, label, desc, value, onToggle }) => (
