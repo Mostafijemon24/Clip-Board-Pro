@@ -22,6 +22,7 @@
     "electron:dev": "bash scripts/electron-dev.sh",
     "electron:build": "npm run build && node scripts/create-icons.js && node scripts/fix-electron.js && electron-builder --mac",
     "electron:pack": "npm run build && node scripts/create-icons.js && node scripts/fix-electron.js && electron-builder --mac --dir",
+    "electron:fix": "node scripts/sign-mac-app.js",
     "postinstall": "node scripts/fix-electron.js"
   },
   "dependencies": {
@@ -51,6 +52,7 @@
   "build": {
     "appId": "com.clipboardpro.app",
     "productName": "ClipBoard Pro",
+    "afterPack": "scripts/after-pack.cjs",
     "directories": {
       "output": "release"
     },
@@ -67,6 +69,8 @@
         "zip"
       ],
       "identity": null,
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "icon": "build/icon.icns",
