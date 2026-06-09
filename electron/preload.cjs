@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   checkAccessibility: () => ipcRenderer.invoke("check-accessibility"),
   openAccessibilitySettings: () => ipcRenderer.invoke("open-accessibility-settings"),
   getCursorPoint: () => ipcRenderer.invoke("get-cursor-point"),
+  getLaunchAtLogin: () => ipcRenderer.invoke("get-launch-at-login"),
+  setLaunchAtLogin: (enabled) => ipcRenderer.invoke("set-launch-at-login", enabled),
   onPopupShown: (cb) => {
     const handler = (_, data) => cb(data);
     ipcRenderer.on("popup-shown", handler);

@@ -29,6 +29,8 @@ export interface ElectronAPI {
   checkAccessibility: () => Promise<AccessibilityStatus>;
   openAccessibilitySettings: () => Promise<void>;
   getCursorPoint: () => Promise<{ x: number; y: number }>;
+  getLaunchAtLogin: () => Promise<boolean>;
+  setLaunchAtLogin: (enabled: boolean) => Promise<{ openAtLogin: boolean }>;
   onPopupShown: (cb: (data?: { x: number; y: number }) => void) => () => void;
   onPopupHidden: (cb: () => void) => () => void;
   onClipboardText: (cb: (data: { text: string }) => void) => () => void;

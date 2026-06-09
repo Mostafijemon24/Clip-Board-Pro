@@ -33,7 +33,6 @@ let lastExternalBundleId = null;
 let lastTargetClickPoint = null;
 let isPasting = false;
 let blurHideTimer = null;
-
 const OWN_APPS = new Set(["ClipBoard Pro", "Electron"]);
 
 let nutModule = null;
@@ -160,92 +159,126 @@ function activateTargetApp(targetName, targetBundleId) {
   }
 }
 
-async function pasteIntoTargetApp() {
-  const targetName = targetAppForPaste || lastExternalApp;
-  const targetBundleId = targetAppBundleId || lastExternalBundleId;
-  const clickPoint = lastTargetClickPoint;
+function activateTargetAppFast(targetName, targetPid, targetBundleId) {
+  try {
+    if (targetPid) {
+      execFileSync("osascript", [
+        "-e",
+        `tell application "System Events" to set frontmost of (first process whose unix id is ${targetPid}) to true`,
+      ]);
+      return;
+    }
+  } catch {
+    /* fall back to open */
+  }
+  activateTargetApp(targetName, targetBundleId);
+}
 
+function focusTargetForPaste() {
   hidePopup();
   if (process.platform === "darwin") {
     app.hide();
   }
+  activateTargetAppFast(
+    targetAppForPaste || lastExternalApp,
+    targetAppPid || lastExternalPid,
+    targetAppBundleId || lastExternalBundleId
+  );
+}
 
-  await delay(150);
+function beginPastePrep() {
+  isPasting = true;
+  if (blurHideTimer) {
+    clearTimeout(blurHideTimer);
+    blurHideTimer = null;
+  }
+  focusTargetForPaste();
+}
 
-  activateTargetApp(targetName, targetBundleId);
-  await delay(450);
+async function sendPasteKeystroke() {
+  const { keyboard, Key } = getNutModule();
+  await keyboard.pressKey(Key.LeftSuper, Key.V);
+  await keyboard.releaseKey(Key.LeftSuper, Key.V);
+}
 
+function sendPasteKeystrokeSync() {
+  execFileSync("osascript", [
+    "-e",
+    'tell application "System Events" to keystroke "v" using command down',
+  ]);
+}
+
+function pasteAccessibilityError(pasteErr) {
+  const msg = pasteErr?.message || String(pasteErr);
+  const needsAccessibility =
+    !hasAccessibilityPermission(false) ||
+    msg.includes("1002") ||
+    msg.includes("not allowed") ||
+    msg.includes("accessibility");
+
+  if (needsAccessibility) {
+    hasAccessibilityPermission(true);
+    return {
+      ok: false,
+      needsAccessibility: true,
+      error: `Allow ${accessibilityAppLabel()} in Accessibility, then restart the app.\nPath: ${process.execPath}`,
+    };
+  }
+
+  return { ok: false, error: msg };
+}
+
+async function pasteIntoTargetAppFallback(initialErr) {
+  const targetName = targetAppForPaste || lastExternalApp;
+  const clickPoint = lastTargetClickPoint;
   const x = clickPoint?.x ?? null;
   const y = clickPoint?.y ?? null;
+  let pasteErr = initialErr;
 
-  try {
-    const { mouse, keyboard, Key, Point, Button } = getNutModule();
-
-    if (x != null && y != null) {
+  if (x != null && y != null) {
+    try {
+      const { mouse, Point, Button } = getNutModule();
       await mouse.setPosition(new Point(Math.round(x), Math.round(y)));
       await mouse.click(Button.LEFT);
-      await delay(150);
+      await sendPasteKeystroke();
+      return { ok: true };
+    } catch (clickErr) {
+      pasteErr = clickErr;
     }
 
-    await keyboard.pressKey(Key.LeftSuper, Key.V);
-    await keyboard.releaseKey(Key.LeftSuper, Key.V);
-    return { ok: true };
-  } catch (nutErr) {
-    let pasteErr = nutErr;
-
-    if (x != null && y != null) {
-      try {
-        const { err } = await runAppleScript(`
-          tell application "System Events"
-            click at {${Math.round(x)}, ${Math.round(y)}}
-            delay 0.15
-            keystroke "v" using command down
-          end tell
-        `);
-        if (!err) return { ok: true };
-        pasteErr = err;
-      } catch (scriptErr) {
-        pasteErr = scriptErr;
-      }
+    try {
+      const { err } = await runAppleScript(`
+        tell application "System Events"
+          click at {${Math.round(x)}, ${Math.round(y)}}
+          keystroke "v" using command down
+        end tell
+      `);
+      if (!err) return { ok: true };
+      pasteErr = err;
+    } catch (scriptErr) {
+      pasteErr = scriptErr;
     }
-
-    if (targetName) {
-      try {
-        const name = escapeAppleScriptString(targetName);
-        const { err } = await runAppleScript(`
-          tell application "System Events"
-            tell process "${name}"
-              set frontmost to true
-            end tell
-            delay 0.2
-            keystroke "v" using command down
-          end tell
-        `);
-        if (!err) return { ok: true };
-        pasteErr = err;
-      } catch (scriptErr) {
-        pasteErr = scriptErr;
-      }
-    }
-
-    const msg = pasteErr?.message || String(pasteErr);
-    const needsAccessibility =
-      !hasAccessibilityPermission(false) ||
-      msg.includes("1002") ||
-      msg.includes("not allowed") ||
-      msg.includes("accessibility");
-
-    if (needsAccessibility) {
-      hasAccessibilityPermission(true);
-      return {
-        ok: false,
-        needsAccessibility: true,
-        error: `Allow ${accessibilityAppLabel()} in Accessibility, then restart the app.\nPath: ${process.execPath}`,
-      };
-    }
-
-    return { ok: false, error: msg };
   }
+
+  if (targetName) {
+    try {
+      const name = escapeAppleScriptString(targetName);
+      const { err } = await runAppleScript(`
+        tell application "System Events"
+          tell process "${name}"
+            set frontmost to true
+          end tell
+          keystroke "v" using command down
+        end tell
+      `);
+      if (!err) return { ok: true };
+      pasteErr = err;
+    } catch (scriptErr) {
+      pasteErr = scriptErr;
+    }
+  }
+
+  return pasteAccessibilityError(pasteErr);
 }
 
 function hidePopup() {
@@ -448,8 +481,19 @@ async function performPaste(writeFn) {
     blurHideTimer = null;
   }
   try {
+    focusTargetForPaste();
     writeFn();
-    return await pasteIntoTargetApp();
+    try {
+      await sendPasteKeystroke();
+      return { ok: true };
+    } catch (nutErr) {
+      try {
+        sendPasteKeystrokeSync();
+        return { ok: true };
+      } catch {
+        return await pasteIntoTargetAppFallback(nutErr);
+      }
+    }
   } finally {
     isPasting = false;
   }
@@ -467,11 +511,7 @@ function setupIpc() {
   });
 
   ipcMain.handle("prepare-paste", () => {
-    isPasting = true;
-    if (blurHideTimer) {
-      clearTimeout(blurHideTimer);
-      blurHideTimer = null;
-    }
+    beginPastePrep();
   });
 
   ipcMain.handle("check-accessibility", () => ({
@@ -501,6 +541,16 @@ function setupIpc() {
 
   ipcMain.handle("get-cursor-point", () => screen.getCursorScreenPoint());
   ipcMain.handle("is-electron", () => true);
+
+  ipcMain.handle("get-launch-at-login", () => app.getLoginItemSettings().openAtLogin);
+
+  ipcMain.handle("set-launch-at-login", (_, enabled) => {
+    app.setLoginItemSettings({
+      openAtLogin: Boolean(enabled),
+      openAsHidden: true,
+    });
+    return { openAtLogin: app.getLoginItemSettings().openAtLogin };
+  });
 }
 
 app.whenReady().then(() => {
@@ -511,6 +561,12 @@ app.whenReady().then(() => {
   createWindow();
   createTray();
   setupIpc();
+
+  try {
+    getNutModule();
+  } catch {
+    /* optional preload */
+  }
 
   registerGlobalShortcut({ ctrl: true, meta: true, alt: false, shift: false, key: "V" });
 

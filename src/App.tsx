@@ -240,8 +240,8 @@ function ClipRow({
     if ((e.target as HTMLElement).closest("button")) return;
     e.preventDefault();
     e.stopPropagation();
-    void (onPaste && window.electronAPI?.preparePaste?.());
-    copyToClipboard();
+    if (onPaste) void window.electronAPI?.preparePaste?.();
+    void copyToClipboard();
   };
 
   return (
@@ -461,6 +461,7 @@ export default function App() {
 
   const pasteToFocused = useCallback(async (text: string) => {
     if (inElectron && window.electronAPI) {
+      void window.electronAPI.preparePaste();
       handlePasteResult(await window.electronAPI.pasteText(text));
       return;
     }
@@ -1136,10 +1137,20 @@ function SettingsPanel({
   const toggle = (key: keyof typeof toggles) =>
     setToggles((prev) => ({ ...prev, [key]: !prev[key] }));
 
+  const toggleLaunchAtLogin = () => {
+    const next = !toggles.login;
+    void window.electronAPI?.setLaunchAtLogin(next).then(({ openAtLogin }) => {
+      setToggles((prev) => ({ ...prev, login: openAtLogin }));
+    });
+  };
+
   useEffect(() => {
     void window.electronAPI?.checkAccessibility().then(({ granted, appPath }) => {
       setAccessibilityGranted(granted);
       setAccessibilityPath(appPath);
+    });
+    void window.electronAPI?.getLaunchAtLogin().then((enabled) => {
+      setToggles((prev) => ({ ...prev, login: enabled }));
     });
   }, []);
 
@@ -1151,7 +1162,7 @@ function SettingsPanel({
       value: historyOn,
       onToggle: onHistoryToggle,
     },
-    { key: "login",   label: "Launch at Login",  desc: "Start ClipBoard Pro on startup",  value: toggles.login,   onToggle: () => toggle("login") },
+    { key: "login",   label: "Launch at Login",  desc: "Start ClipBoard Pro on startup",  value: toggles.login,   onToggle: toggleLaunchAtLogin },
     { key: "menubar", label: "Show in Menu Bar", desc: "Keep icon in the menu bar",         value: toggles.menubar, onToggle: () => toggle("menubar") },
     { key: "sound",   label: "Sound Effects",    desc: "Play sounds on copy",               value: toggles.sound,   onToggle: () => toggle("sound") },
   ];
@@ -1207,7 +1218,7 @@ function SettingsPanel({
         <ShortcutEditor current={shortcut} onSave={onShortcutSave} />
       </div>
       <div className="bg-neutral-100/40 border-t border-neutral-200 flex px-4 py-3 justify-between items-center">
-        <span className="text-neutral-500 text-xs">ClipBoard Pro v1.2.1</span>
+        <span className="text-neutral-500 text-xs">ClipBoard Pro v1.2.5</span>
         <button className="underline underline-offset-2 text-neutral-950 text-xs">Check for updates</button>
       </div>
     </>
